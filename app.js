@@ -308,6 +308,7 @@ function addTaskRow(task = { name: "", weight: 10, days: 1 }) {
   template.querySelector('[data-field="name"]').value = task.name || "";
   template.querySelector('[data-field="weight"]').value = task.weight || 10;
   template.querySelector('[data-field="days"]').value = task.days || 1;
+  template.querySelector('[data-field="note"]').value = task.note || "";
   $("#taskEditor").appendChild(template);
 }
 
@@ -316,7 +317,8 @@ function readTaskRows() {
     id: uid(),
     name: row.querySelector('[data-field="name"]').value.trim(),
     weight: Number(row.querySelector('[data-field="weight"]').value),
-    days: Number(row.querySelector('[data-field="days"]').value)
+    days: Number(row.querySelector('[data-field="days"]').value),
+    note: row.querySelector('[data-field="note"]')?.value.trim() || ""
   })).filter((task) => task.name);
 }
 
@@ -339,7 +341,7 @@ function openProjectEditor(project = null, template = null) {
     dueDate: addDays(startDate, task.days),
     completedAt: "",
     done: false,
-    note: ""
+    note: task.note || ""
   })) || [];
 
   dialogTitle.textContent = project ? "编辑项目" : "新建项目";
