@@ -552,6 +552,11 @@ input[type="date"]::-webkit-date-and-time-value {
   .task-row {
     grid-template-columns: minmax(0, 1fr) 82px 36px;
     gap: 8px;
+    align-items: start;
+  }
+
+  .task-row label {
+    gap: 4px;
   }
 
   .task-row label:first-child {
@@ -576,6 +581,10 @@ input[type="date"]::-webkit-date-and-time-value {
 
   .task-row input[type="date"] {
     width: 100%;
+    min-height: 38px;
+    height: 38px;
+    padding: 6px 8px;
+    line-height: 1.2;
   }
 
   .task-row .remove-task {

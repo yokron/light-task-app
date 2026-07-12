@@ -298,18 +298,25 @@ function openTemplateEditor(template = null) {
     </div>
   `;
   const taskEditor = $("#taskEditor");
-  tasks.forEach((task) => addTaskRow(task));
+  tasks.forEach((task) => addTaskRow(task, !template));
   updateWeightHint();
   openDialog();
 }
 
-function addTaskRow(task = { name: "", weight: 10, days: 1 }) {
+function addTaskRow(task = { name: "", weight: "", days: 1 }, autoWeight = false) {
   const template = $("#taskRowTemplate").content.cloneNode(true);
+  const row = template.querySelector(".task-row");
+  row.dataset.autoWeight = autoWeight ? "1" : "0";
   template.querySelector('[data-field="name"]').value = task.name || "";
-  template.querySelector('[data-field="weight"]').value = task.weight || 10;
+  template.querySelector('[data-field="weight"]').value = task.weight ?? "";
   template.querySelector('[data-field="days"]').value = task.days || 1;
   template.querySelector('[data-field="note"]').value = task.note || "";
   $("#taskEditor").appendChild(template);
+}
+
+function canRebalanceTemplateWeights() {
+  const rows = [...document.querySelectorAll("#taskEditor .task-row")];
+  return rows.length > 0 && rows.every((row) => row.dataset.autoWeight === "1");
 }
 
 function rebalanceTemplateWeights() {
@@ -320,6 +327,7 @@ function rebalanceTemplateWeights() {
   rows.forEach((row) => {
     const weightInput = row.querySelector('[data-field="weight"]');
     weightInput.value = base + (remainder > 0 ? 1 : 0);
+    row.dataset.autoWeight = "1";
     remainder -= 1;
   });
   updateWeightHint();
@@ -692,12 +700,15 @@ document.addEventListener("click", (event) => {
   if (target.id === "newProjectBtn") openProjectPicker();
   if (target.id === "downloadBtn" || target.id === "exportBtn") exportData();
   if (target.id === "addTaskRowBtn") {
-    addTaskRow();
-    rebalanceTemplateWeights();
+    const shouldRebalance = canRebalanceTemplateWeights();
+    addTaskRow({ name: "", weight: shouldRebalance ? 0 : "", days: 1 }, shouldRebalance);
+    if (shouldRebalance) rebalanceTemplateWeights();
+    else updateWeightHint();
   }
   if (target.matches(".remove-task")) {
+    const shouldRebalance = target.closest("#taskEditor") && canRebalanceTemplateWeights();
     target.closest(".task-row")?.remove();
-    if (target.closest("#taskEditor")) rebalanceTemplateWeights();
+    if (shouldRebalance) rebalanceTemplateWeights();
     else updateWeightHint();
   }
 
@@ -744,6 +755,9 @@ document.addEventListener("click", (event) => {
 });
 
 document.addEventListener("input", (event) => {
+  if (event.target.matches('#taskEditor [data-field="weight"]')) {
+    event.target.closest(".task-row").dataset.autoWeight = "0";
+  }
   if (event.target.closest("#taskEditor")) updateWeightHint();
 });
 
