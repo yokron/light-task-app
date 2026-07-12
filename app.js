@@ -185,6 +185,7 @@ function renderProjects() {
           <div class="task-main">
             <strong>${escapeHtml(task.name)}</strong>
             <small>${task.weight}% · 预计 ${formatDate(task.dueDate)}${task.done ? ` · 实际 ${formatDate(task.completedAt)}` : ""}</small>
+            ${task.note ? `<p class="task-note">${escapeHtml(task.note)}</p>` : ""}
           </div>
           <span class="pill ${status.tone}">${status.text}</span>
         </div>
@@ -337,7 +338,8 @@ function openProjectEditor(project = null, template = null) {
     weight: task.weight,
     dueDate: addDays(startDate, task.days),
     completedAt: "",
-    done: false
+    done: false,
+    note: ""
   })) || [];
 
   dialogTitle.textContent = project ? "编辑项目" : "新建项目";
@@ -356,6 +358,7 @@ function openProjectEditor(project = null, template = null) {
               <label><span>占比 %</span><input data-field="weight" type="number" min="1" max="100" required value="${task.weight}"></label>
               <label><span>预计日期</span><input data-field="dueDate" type="date" required value="${task.dueDate}"></label>
               <button class="icon-button remove-task" type="button" aria-label="删除子任务">×</button>
+              <label class="task-note-field"><span>备注</span><textarea data-field="note" placeholder="说明进展、滞后原因或需要协同的事项">${escapeHtml(task.note || "")}</textarea></label>
             </div>
           `).join("")}
         </div>
@@ -417,7 +420,8 @@ function readProjectTaskRows() {
     weight: Number(row.querySelector('[data-field="weight"]').value),
     dueDate: row.querySelector('[data-field="dueDate"]').value,
     done: row.dataset.done === "1",
-    completedAt: row.dataset.completed || ""
+    completedAt: row.dataset.completed || "",
+    note: row.querySelector('[data-field="note"]')?.value.trim() || ""
   })).filter((task) => task.name);
 }
 
@@ -540,7 +544,7 @@ function projectToMarkdown(project) {
     const status = taskStatus(task);
     const done = task.done ? "x" : " ";
     const completedAt = task.completedAt || "-";
-    return `| ${index + 1} | [${done}] ${escapeMarkdown(task.name)} | ${task.weight}% | ${task.dueDate || "-"} | ${completedAt} | ${status.text} |`;
+    return `| ${index + 1} | [${done}] ${escapeMarkdown(task.name)} | ${task.weight}% | ${task.dueDate || "-"} | ${completedAt} | ${status.text} | ${escapeMarkdown(task.note || "-")} |`;
   }).join("\n");
 
   return [
@@ -555,9 +559,9 @@ function projectToMarkdown(project) {
     "",
     "## 子任务",
     "",
-    "| 序号 | 子任务 | 占比 | 预计完成 | 实际完成 | 状态 |",
-    "| --- | --- | ---: | --- | --- | --- |",
-    rows || "| - | - | - | - | - | - |",
+    "| 序号 | 子任务 | 占比 | 预计完成 | 实际完成 | 状态 | 备注 |",
+    "| --- | --- | ---: | --- | --- | --- | --- |",
+    rows || "| - | - | - | - | - | - | - |",
     "",
     "## 备注",
     "",
@@ -606,6 +610,7 @@ function projectToPrintSection(project) {
             <th>预计完成</th>
             <th>实际完成</th>
             <th>状态</th>
+            <th>备注</th>
           </tr>
         </thead>
         <tbody>
@@ -619,6 +624,7 @@ function projectToPrintSection(project) {
                 <td>${escapeHtml(task.dueDate || "-")}</td>
                 <td>${escapeHtml(task.completedAt || "-")}</td>
                 <td>${escapeHtml(status.text)}</td>
+                <td>${escapeHtml(task.note || "-")}</td>
               </tr>
             `;
           }).join("")}
