@@ -24,6 +24,8 @@ let state = loadState();
 let activeView = "projects";
 let dialogMode = null;
 let editingId = null;
+let lockedScrollY = 0;
+const selectedProjectIds = new Set();
 
 const $ = (selector) => document.querySelector(selector);
 const summaryBand = $("#summaryBand");
@@ -151,9 +153,30 @@ function renderProjects() {
     return;
   }
 
-  projectList.innerHTML = state.projects.map((project) => {
+  const currentIds = new Set(state.projects.map((project) => project.id));
+  selectedProjectIds.forEach((id) => {
+    if (!currentIds.has(id)) selectedProjectIds.delete(id);
+  });
+
+  const bulkBar = `
+    <div class="panel project-bulk">
+      <div>
+        <strong>已选 ${selectedProjectIds.size} 个项目</strong>
+        <p class="muted">勾选项目后，可统一打印成一份报告。</p>
+      </div>
+      <div class="actions">
+        <button class="secondary-button" type="button" data-action="select-all-projects">全选</button>
+        <button class="secondary-button" type="button" data-action="clear-project-selection">清空</button>
+        <button class="primary-button" type="button" data-action="print-selected-projects">打印选中</button>
+        <button class="secondary-button" type="button" data-action="export-selected-md">导出选中 Markdown</button>
+      </div>
+    </div>
+  `;
+
+  const cards = state.projects.map((project) => {
     const progress = projectProgress(project);
     const status = projectStatus(project);
+    const selected = selectedProjectIds.has(project.id);
     const taskHtml = project.tasks.map((task) => {
       const status = taskStatus(task);
       return `
@@ -171,10 +194,13 @@ function renderProjects() {
     return `
       <article class="card">
         <div class="card-head">
-          <div class="card-title">
-            <h3>${escapeHtml(project.name)}</h3>
-            <p class="muted">${escapeHtml(project.templateName || "自定义项目")}</p>
-          </div>
+          <label class="project-select">
+            <input type="checkbox" ${selected ? "checked" : ""} data-action="select-project" data-id="${project.id}" aria-label="选择 ${escapeHtml(project.name)}">
+            <span class="card-title">
+              <strong>${escapeHtml(project.name)}</strong>
+              <small>${escapeHtml(project.templateName || "自定义项目")}</small>
+            </span>
+          </label>
           <span class="pill ${status.tone}">${status.text}</span>
         </div>
         <div class="meta-row">
@@ -193,6 +219,8 @@ function renderProjects() {
       </article>
     `;
   }).join("");
+
+  projectList.innerHTML = bulkBar + cards;
 }
 
 function renderTemplates() {
@@ -271,7 +299,7 @@ function openTemplateEditor(template = null) {
   const taskEditor = $("#taskEditor");
   tasks.forEach((task) => addTaskRow(task));
   updateWeightHint();
-  dialog.showModal();
+  openDialog();
 }
 
 function addTaskRow(task = { name: "", weight: 10, days: 1 }) {
@@ -335,7 +363,7 @@ function openProjectEditor(project = null, template = null) {
     </div>
   `;
   dialog.dataset.templateId = template?.id || project?.templateId || "";
-  dialog.showModal();
+  openDialog();
 }
 
 function openProjectPicker() {
@@ -356,7 +384,26 @@ function openProjectPicker() {
       <p class="muted">建议选择占比合计为 100% 的模板。项目创建后仍可调整子任务日期和占比。</p>
     </div>
   `;
+  openDialog();
+}
+
+function openDialog() {
+  lockPageScroll();
   dialog.showModal();
+}
+
+function lockPageScroll() {
+  if (document.body.classList.contains("dialog-open")) return;
+  lockedScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+  document.body.classList.add("dialog-open");
+  document.body.style.top = `-${lockedScrollY}px`;
+}
+
+function unlockPageScroll() {
+  if (!document.body.classList.contains("dialog-open")) return;
+  document.body.classList.remove("dialog-open");
+  document.body.style.top = "";
+  window.scrollTo(0, lockedScrollY);
 }
 
 function sumDays(tasks) {
@@ -474,6 +521,18 @@ function exportProjectMarkdown(project) {
   URL.revokeObjectURL(url);
 }
 
+function exportProjectsMarkdown(projects) {
+  if (!projects.length) return alert("请先选择要导出的项目。");
+  const markdown = projects.map(projectToMarkdown).join("\n\n---\n\n");
+  const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `selected-projects-${todayISO()}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function projectToMarkdown(project) {
   const status = projectStatus(project);
   const progress = projectProgress(project);
@@ -507,11 +566,28 @@ function projectToMarkdown(project) {
 }
 
 function printProject(project) {
-  const status = projectStatus(project);
-  const progress = projectProgress(project);
+  printProjects([project]);
+}
+
+function printProjects(projects) {
+  if (!projects.length) return alert("请先选择要打印的项目。");
   printRoot.innerHTML = `
     <article class="print-report">
-      <h1>${escapeHtml(project.name)}</h1>
+      <h1>项目报告</h1>
+      <p>共 ${projects.length} 个项目 · 生成日期 ${todayISO()}</p>
+      ${projects.map(projectToPrintSection).join("")}
+      <p class="print-footnote">由轻任务模板 App 生成。</p>
+    </article>
+  `;
+  window.print();
+}
+
+function projectToPrintSection(project) {
+  const status = projectStatus(project);
+  const progress = projectProgress(project);
+  return `
+    <section class="print-project">
+      <h2>${escapeHtml(project.name)}</h2>
       <p>${escapeHtml(project.templateName || "自定义项目")}</p>
       <div class="print-meta">
         <div><strong>项目状态：</strong>${escapeHtml(status.text)}</div>
@@ -548,10 +624,8 @@ function printProject(project) {
           }).join("")}
         </tbody>
       </table>
-      <p class="print-footnote">由轻任务模板 App 生成。</p>
-    </article>
+    </section>
   `;
-  window.print();
 }
 
 function escapeMarkdown(value) {
@@ -584,6 +658,10 @@ function importData(file) {
   reader.readAsText(file);
 }
 
+function selectedProjects() {
+  return state.projects.filter((project) => selectedProjectIds.has(project.id));
+}
+
 document.addEventListener("click", (event) => {
   const target = event.target.closest("button, input[type='checkbox']");
   if (!target) return;
@@ -602,6 +680,21 @@ document.addEventListener("click", (event) => {
   }
 
   const action = target.dataset.action;
+  if (action === "select-project") {
+    if (target.checked) selectedProjectIds.add(target.dataset.id);
+    else selectedProjectIds.delete(target.dataset.id);
+    render();
+  }
+  if (action === "select-all-projects") {
+    state.projects.forEach((project) => selectedProjectIds.add(project.id));
+    render();
+  }
+  if (action === "clear-project-selection") {
+    selectedProjectIds.clear();
+    render();
+  }
+  if (action === "print-selected-projects") printProjects(selectedProjects());
+  if (action === "export-selected-md") exportProjectsMarkdown(selectedProjects());
   if (action === "project-from-template") {
     const template = state.templates.find((item) => item.id === target.dataset.id);
     openProjectEditor(null, template);
@@ -622,6 +715,7 @@ document.addEventListener("click", (event) => {
   }
   if (action === "delete-project" && confirm("删除这个项目？")) {
     state.projects = state.projects.filter((item) => item.id !== target.dataset.id);
+    selectedProjectIds.delete(target.dataset.id);
     render();
   }
   if (action === "toggle-task") toggleTask(target.dataset.project, target.dataset.task, target.checked);
@@ -637,6 +731,8 @@ editorForm.addEventListener("submit", (event) => {
   if (!validateBeforeSave()) return;
   saveDialog();
 });
+
+dialog.addEventListener("close", unlockPageScroll);
 
 $("#importFile").addEventListener("change", (event) => {
   const file = event.target.files?.[0];

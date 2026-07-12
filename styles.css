@@ -25,6 +25,14 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
 }
 
+body.dialog-open {
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
 button,
 input,
 select,
@@ -188,8 +196,51 @@ h3 {
   min-width: 0;
 }
 
+.card-title strong {
+  display: block;
+  color: var(--ink);
+  font-size: 18px;
+  overflow-wrap: anywhere;
+}
+
+.card-title small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
 .card-title h3 {
   overflow-wrap: anywhere;
+}
+
+.project-bulk {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.project-bulk p {
+  margin-bottom: 0;
+}
+
+.project-select {
+  display: flex;
+  grid-template-columns: none;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+  gap: 10px;
+  color: var(--ink);
+}
+
+.project-select input {
+  width: 22px;
+  min-height: 22px;
+  height: 22px;
+  margin-top: 2px;
+  accent-color: var(--green);
 }
 
 .meta-row {
@@ -344,6 +395,8 @@ dialog::backdrop {
 .dialog-body {
   max-height: min(86vh, 760px);
   overflow: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 16px;
   border: 1px solid var(--line);
   border-radius: 10px;
@@ -440,6 +493,10 @@ textarea {
     align-items: flex-start;
   }
 
+  .project-bulk {
+    display: grid;
+  }
+
   .task-row {
     grid-template-columns: 1fr 82px;
   }
@@ -474,6 +531,21 @@ textarea {
   .print-report h1 {
     margin: 0 0 8px;
     font-size: 26px;
+  }
+
+  .print-report h2 {
+    margin: 22px 0 6px;
+    font-size: 21px;
+  }
+
+  .print-project {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .print-project:last-of-type {
+    break-after: auto;
+    page-break-after: auto;
   }
 
   .print-report .print-meta {
