@@ -358,6 +358,11 @@ function openProjectEditor(project = null, template = null) {
           `).join("")}
         </div>
       </div>
+      ${project ? `
+        <div class="project-editor-danger">
+          <button class="danger-button" type="button" data-action="delete-project-editor" data-id="${project.id}">删除项目</button>
+        </div>
+      ` : ""}
     </div>
   `;
   dialog.dataset.templateId = template?.id || project?.templateId || "";
@@ -723,6 +728,12 @@ document.addEventListener("click", (event) => {
   if (action === "delete-project" && confirm("删除这个项目？")) {
     state.projects = state.projects.filter((item) => item.id !== target.dataset.id);
     selectedProjectIds.delete(target.dataset.id);
+    render();
+  }
+  if (action === "delete-project-editor" && confirm("删除这个项目？删除后无法恢复。")) {
+    state.projects = state.projects.filter((item) => item.id !== target.dataset.id);
+    selectedProjectIds.delete(target.dataset.id);
+    dialog.close();
     render();
   }
   if (action === "toggle-task") toggleTask(target.dataset.project, target.dataset.task, target.checked);

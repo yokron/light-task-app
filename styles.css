@@ -545,6 +545,12 @@ textarea {
   min-height: 68px;
 }
 
+.project-editor-danger {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 4px;
+}
+
 input[type="date"] {
   width: 11.5em;
   max-width: 100%;
