@@ -312,6 +312,19 @@ function addTaskRow(task = { name: "", weight: 10, days: 1 }) {
   $("#taskEditor").appendChild(template);
 }
 
+function rebalanceTemplateWeights() {
+  const rows = [...document.querySelectorAll("#taskEditor .task-row")];
+  if (!rows.length) return;
+  const base = Math.floor(100 / rows.length);
+  let remainder = 100 - (base * rows.length);
+  rows.forEach((row) => {
+    const weightInput = row.querySelector('[data-field="weight"]');
+    weightInput.value = base + (remainder > 0 ? 1 : 0);
+    remainder -= 1;
+  });
+  updateWeightHint();
+}
+
 function readTaskRows() {
   return [...document.querySelectorAll("#taskEditor .task-row")].map((row) => ({
     id: uid(),
@@ -680,11 +693,12 @@ document.addEventListener("click", (event) => {
   if (target.id === "downloadBtn" || target.id === "exportBtn") exportData();
   if (target.id === "addTaskRowBtn") {
     addTaskRow();
-    updateWeightHint();
+    rebalanceTemplateWeights();
   }
   if (target.matches(".remove-task")) {
     target.closest(".task-row")?.remove();
-    updateWeightHint();
+    if (target.closest("#taskEditor")) rebalanceTemplateWeights();
+    else updateWeightHint();
   }
 
   const action = target.dataset.action;
