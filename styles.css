@@ -193,6 +193,50 @@ h3 {
   padding: 14px;
 }
 
+.project-card {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.project-card-select {
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  accent-color: var(--green);
+}
+
+.project-card-open {
+  display: grid;
+  min-width: 0;
+  gap: 10px;
+  padding: 2px 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+
+.project-card-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+  gap: 12px;
+}
+
+.project-card-summary strong {
+  min-width: 0;
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.project-card-summary > span {
+  color: var(--green);
+  font-weight: 800;
+}
+
 .card-head {
   justify-content: space-between;
   gap: 12px;
@@ -479,6 +523,24 @@ textarea {
   grid-column: 1 / -1;
 }
 
+.task-done-field {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  gap: 8px;
+}
+
+.task-done-field input {
+  width: 22px;
+  min-height: 22px;
+  height: 22px;
+  accent-color: var(--green);
+}
+
+.task-completed-field {
+  grid-column: span 2;
+}
+
 .task-note-field textarea {
   min-height: 68px;
 }
@@ -576,7 +638,17 @@ input[type="date"]::-webkit-date-and-time-value {
 
   .task-row .task-note-field {
     grid-column: 1 / 4;
+    order: 7;
+  }
+
+  .task-row .task-done-field {
+    grid-column: 1 / 2;
     order: 5;
+  }
+
+  .task-row .task-completed-field {
+    grid-column: 2 / 4;
+    order: 6;
   }
 
   .task-row input[type="date"] {

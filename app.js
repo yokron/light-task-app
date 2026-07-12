@@ -175,48 +175,18 @@ function renderProjects() {
 
   const cards = state.projects.map((project) => {
     const progress = projectProgress(project);
-    const status = projectStatus(project);
     const selected = selectedProjectIds.has(project.id);
-    const taskHtml = project.tasks.map((task) => {
-      const status = taskStatus(task);
-      return `
-        <div class="task-line">
-          <input type="checkbox" ${task.done ? "checked" : ""} data-action="toggle-task" data-project="${project.id}" data-task="${task.id}" aria-label="完成 ${escapeHtml(task.name)}">
-          <div class="task-main">
-            <strong>${escapeHtml(task.name)}</strong>
-            <small>${task.weight}% · 预计 ${formatDate(task.dueDate)}${task.done ? ` · 实际 ${formatDate(task.completedAt)}` : ""}</small>
-            ${task.note ? `<p class="task-note">${escapeHtml(task.note)}</p>` : ""}
-          </div>
-          <span class="pill ${status.tone}">${status.text}</span>
-        </div>
-      `;
-    }).join("");
 
     return `
-      <article class="card">
-        <div class="card-head">
-          <label class="project-select">
-            <input type="checkbox" ${selected ? "checked" : ""} data-action="select-project" data-id="${project.id}" aria-label="选择 ${escapeHtml(project.name)}">
-            <span class="card-title">
-              <strong>${escapeHtml(project.name)}</strong>
-              <small>${escapeHtml(project.templateName || "自定义项目")}</small>
-            </span>
-          </label>
-          <span class="pill ${status.tone}">${status.text}</span>
-        </div>
-        <div class="meta-row">
-          <span class="pill">开始 ${formatDate(project.startDate)}</span>
-          <span class="pill">截止 ${formatDate(project.dueDate)}</span>
-          <span class="pill good">${progress}%</span>
-        </div>
-        <div class="progress" aria-label="项目进度 ${progress}%"><span style="width:${progress}%"></span></div>
-        <div class="task-list">${taskHtml}</div>
-        <div class="actions">
-          <button class="secondary-button" type="button" data-action="edit-project" data-id="${project.id}">编辑</button>
-          <button class="secondary-button" type="button" data-action="export-project-md" data-id="${project.id}">导出 Markdown</button>
-          <button class="secondary-button" type="button" data-action="print-project" data-id="${project.id}">打印</button>
-          <button class="danger-button" type="button" data-action="delete-project" data-id="${project.id}">删除</button>
-        </div>
+      <article class="card project-card">
+        <input class="project-card-select" type="checkbox" ${selected ? "checked" : ""} data-action="select-project" data-id="${project.id}" aria-label="选择 ${escapeHtml(project.name)}">
+        <button class="project-card-open" type="button" data-action="edit-project" data-id="${project.id}" aria-label="编辑 ${escapeHtml(project.name)}">
+          <span class="project-card-summary">
+            <strong>${escapeHtml(project.name)}</strong>
+            <span>${progress}%</span>
+          </span>
+          <span class="progress" aria-label="项目进度 ${progress}%"><span style="width:${progress}%"></span></span>
+        </button>
       </article>
     `;
   }).join("");
@@ -376,11 +346,13 @@ function openProjectEditor(project = null, template = null) {
         <h3>项目子任务</h3>
         <div class="task-editor" id="projectTaskEditor">
           ${sourceTasks.map((task) => `
-            <div class="task-row project-task-row" data-done="${task.done ? "1" : "0"}" data-completed="${escapeHtml(task.completedAt || "")}">
+            <div class="task-row project-task-row" data-id="${escapeHtml(task.id || uid())}">
               <label><span>子任务</span><input data-field="name" required value="${escapeHtml(task.name)}"></label>
               <label><span>占比 %</span><input data-field="weight" type="number" min="1" max="100" required value="${task.weight}"></label>
               <label><span>预计日期</span><input data-field="dueDate" type="date" required value="${task.dueDate}"></label>
               <button class="icon-button remove-task" type="button" aria-label="删除子任务">×</button>
+              <label class="task-done-field"><span>完成</span><input data-field="done" type="checkbox" ${task.done ? "checked" : ""}></label>
+              <label class="task-completed-field"><span>实际完成日期</span><input data-field="completedAt" type="date" value="${escapeHtml(task.completedAt || "")}" ${task.done ? "" : "disabled"}></label>
               <label class="task-note-field"><span>备注</span><textarea data-field="note" placeholder="说明进展、滞后原因或需要协同的事项">${escapeHtml(task.note || "")}</textarea></label>
             </div>
           `).join("")}
@@ -438,12 +410,14 @@ function sumDays(tasks) {
 
 function readProjectTaskRows() {
   return [...document.querySelectorAll("#projectTaskEditor .project-task-row")].map((row) => ({
-    id: uid(),
+    id: row.dataset.id || uid(),
     name: row.querySelector('[data-field="name"]').value.trim(),
     weight: Number(row.querySelector('[data-field="weight"]').value),
     dueDate: row.querySelector('[data-field="dueDate"]').value,
-    done: row.dataset.done === "1",
-    completedAt: row.dataset.completed || "",
+    done: row.querySelector('[data-field="done"]').checked,
+    completedAt: row.querySelector('[data-field="done"]').checked
+      ? row.querySelector('[data-field="completedAt"]').value
+      : "",
     note: row.querySelector('[data-field="note"]')?.value.trim() || ""
   })).filter((task) => task.name);
 }
@@ -759,6 +733,15 @@ document.addEventListener("input", (event) => {
     event.target.closest(".task-row").dataset.autoWeight = "0";
   }
   if (event.target.closest("#taskEditor")) updateWeightHint();
+});
+
+document.addEventListener("change", (event) => {
+  if (!event.target.matches('.project-task-row [data-field="done"]')) return;
+  const row = event.target.closest(".project-task-row");
+  const completedAt = row.querySelector('[data-field="completedAt"]');
+  completedAt.disabled = !event.target.checked;
+  if (event.target.checked && !completedAt.value) completedAt.value = todayISO();
+  if (!event.target.checked) completedAt.value = "";
 });
 
 editorForm.addEventListener("submit", (event) => {
