@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#10231f">
+    <title>轻任务模板</title>
+    <link rel="manifest" href="./manifest.json">
+    <link rel="icon" href="./icon.svg" type="image/svg+xml">
+    <link rel="apple-touch-icon" href="./icon.svg">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">离线项目清单</p>
+          <h1>轻任务模板</h1>
+        </div>
+        <button class="icon-button" id="exportBtn" type="button" title="导出数据" aria-label="导出数据">
+          <span aria-hidden="true">⇩</span>
+        </button>
+      </header>
+
+      <main>
+        <section class="summary-band" id="summaryBand"></section>
+
+        <nav class="tabs" aria-label="主要视图">
+          <button class="tab is-active" type="button" data-view="projects">项目</button>
+          <button class="tab" type="button" data-view="templates">模板</button>
+          <button class="tab" type="button" data-view="data">备份</button>
+        </nav>
+
+        <section class="view is-active" id="projectsView">
+          <div class="section-head">
+            <h2>项目</h2>
+            <button class="primary-button" id="newProjectBtn" type="button">新建项目</button>
+          </div>
+          <div class="stack" id="projectList"></div>
+        </section>
+
+        <section class="view" id="templatesView">
+          <div class="section-head">
+            <h2>模板</h2>
+            <button class="primary-button" id="newTemplateBtn" type="button">新建模板</button>
+          </div>
+          <div class="stack" id="templateList"></div>
+        </section>
+
+        <section class="view" id="dataView">
+          <div class="panel">
+            <h2>备份</h2>
+            <p class="muted">数据只保存在当前浏览器。换手机、清缓存或切换浏览器前，建议导出 JSON。</p>
+            <div class="button-row">
+              <button class="primary-button" id="downloadBtn" type="button">下载 JSON</button>
+              <label class="secondary-button file-button">
+                导入 JSON
+                <input id="importFile" type="file" accept="application/json">
+              </label>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="editorDialog">
+      <form method="dialog" class="dialog-body" id="editorForm" novalidate>
+        <div class="dialog-head">
+          <h2 id="dialogTitle">编辑</h2>
+          <button class="icon-button" value="cancel" type="submit" formnovalidate aria-label="关闭">×</button>
+        </div>
+        <div id="editorFields"></div>
+        <div class="dialog-actions">
+          <button class="secondary-button" value="cancel" type="submit" formnovalidate>取消</button>
+          <button class="primary-button" id="saveDialogBtn" value="default" type="submit">保存</button>
+        </div>
+      </form>
+    </dialog>
+
+    <template id="taskRowTemplate">
+      <div class="task-row">
+        <label>
+          <span>子任务</span>
+          <input data-field="name" required>
+        </label>
+        <label>
+          <span>占比 %</span>
+          <input data-field="weight" type="number" min="1" max="100" required>
+        </label>
+        <label>
+          <span>默认天数</span>
+          <input data-field="days" type="number" min="1" max="365" required>
+        </label>
+        <button class="icon-button remove-task" type="button" aria-label="删除子任务">×</button>
+      </div>
+    </template>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
