@@ -33,6 +33,7 @@ const dialog = $("#editorDialog");
 const editorForm = $("#editorForm");
 const editorFields = $("#editorFields");
 const dialogTitle = $("#dialogTitle");
+const printRoot = $("#printRoot");
 
 function loadState() {
   const saved = localStorage.getItem(STORAGE_KEY);
@@ -185,6 +186,8 @@ function renderProjects() {
         <div class="task-list">${taskHtml}</div>
         <div class="actions">
           <button class="secondary-button" type="button" data-action="edit-project" data-id="${project.id}">编辑</button>
+          <button class="secondary-button" type="button" data-action="export-project-md" data-id="${project.id}">导出 Markdown</button>
+          <button class="secondary-button" type="button" data-action="print-project" data-id="${project.id}">打印</button>
           <button class="danger-button" type="button" data-action="delete-project" data-id="${project.id}">删除</button>
         </div>
       </article>
@@ -460,6 +463,109 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
+function exportProjectMarkdown(project) {
+  const markdown = projectToMarkdown(project);
+  const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${safeFileName(project.name)}-${todayISO()}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function projectToMarkdown(project) {
+  const status = projectStatus(project);
+  const progress = projectProgress(project);
+  const rows = project.tasks.map((task, index) => {
+    const status = taskStatus(task);
+    const done = task.done ? "x" : " ";
+    const completedAt = task.completedAt || "-";
+    return `| ${index + 1} | [${done}] ${escapeMarkdown(task.name)} | ${task.weight}% | ${task.dueDate || "-"} | ${completedAt} | ${status.text} |`;
+  }).join("\n");
+
+  return [
+    `# ${escapeMarkdown(project.name)}`,
+    "",
+    `- 模板：${escapeMarkdown(project.templateName || "自定义项目")}`,
+    `- 项目状态：${status.text}`,
+    `- 项目进度：${progress}%`,
+    `- 开始日期：${project.startDate || "-"}`,
+    `- 预计完成：${project.dueDate || "-"}`,
+    `- 导出日期：${todayISO()}`,
+    "",
+    "## 子任务",
+    "",
+    "| 序号 | 子任务 | 占比 | 预计完成 | 实际完成 | 状态 |",
+    "| --- | --- | ---: | --- | --- | --- |",
+    rows || "| - | - | - | - | - | - |",
+    "",
+    "## 备注",
+    "",
+    "- 数据来自轻任务模板 App。"
+  ].join("\n");
+}
+
+function printProject(project) {
+  const status = projectStatus(project);
+  const progress = projectProgress(project);
+  printRoot.innerHTML = `
+    <article class="print-report">
+      <h1>${escapeHtml(project.name)}</h1>
+      <p>${escapeHtml(project.templateName || "自定义项目")}</p>
+      <div class="print-meta">
+        <div><strong>项目状态：</strong>${escapeHtml(status.text)}</div>
+        <div><strong>项目进度：</strong>${progress}%</div>
+        <div><strong>开始日期：</strong>${escapeHtml(project.startDate || "-")}</div>
+        <div><strong>预计完成：</strong>${escapeHtml(project.dueDate || "-")}</div>
+        <div><strong>导出日期：</strong>${todayISO()}</div>
+        <div><strong>子任务数：</strong>${project.tasks.length}</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>序号</th>
+            <th>子任务</th>
+            <th>占比</th>
+            <th>预计完成</th>
+            <th>实际完成</th>
+            <th>状态</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${project.tasks.map((task, index) => {
+            const status = taskStatus(task);
+            return `
+              <tr>
+                <td>${index + 1}</td>
+                <td>${task.done ? "☑" : "☐"} ${escapeHtml(task.name)}</td>
+                <td>${task.weight}%</td>
+                <td>${escapeHtml(task.dueDate || "-")}</td>
+                <td>${escapeHtml(task.completedAt || "-")}</td>
+                <td>${escapeHtml(status.text)}</td>
+              </tr>
+            `;
+          }).join("")}
+        </tbody>
+      </table>
+      <p class="print-footnote">由轻任务模板 App 生成。</p>
+    </article>
+  `;
+  window.print();
+}
+
+function escapeMarkdown(value) {
+  return String(value ?? "").replace(/([\\`*_{}\[\]()#+\-.!|>])/g, "\\$1");
+}
+
+function safeFileName(value) {
+  return String(value || "project")
+    .trim()
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, "-")
+    .slice(0, 60) || "project";
+}
+
 function importData(file) {
   const reader = new FileReader();
   reader.onload = () => {
@@ -506,6 +612,14 @@ document.addEventListener("click", (event) => {
     render();
   }
   if (action === "edit-project") openProjectEditor(state.projects.find((item) => item.id === target.dataset.id));
+  if (action === "export-project-md") {
+    const project = state.projects.find((item) => item.id === target.dataset.id);
+    if (project) exportProjectMarkdown(project);
+  }
+  if (action === "print-project") {
+    const project = state.projects.find((item) => item.id === target.dataset.id);
+    if (project) printProject(project);
+  }
   if (action === "delete-project" && confirm("删除这个项目？")) {
     state.projects = state.projects.filter((item) => item.id !== target.dataset.id);
     render();

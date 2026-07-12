@@ -422,6 +422,10 @@ textarea {
   font-size: 13px;
 }
 
+.print-root {
+  display: none;
+}
+
 @media (max-width: 620px) {
   .app-shell {
     padding: 14px 12px 28px;
@@ -442,5 +446,68 @@ textarea {
 
   .task-row .remove-task {
     width: 100%;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #111;
+  }
+
+  .app-shell,
+  dialog {
+    display: none !important;
+  }
+
+  .print-root {
+    display: block;
+    padding: 0;
+    font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+  }
+
+  .print-report {
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .print-report h1 {
+    margin: 0 0 8px;
+    font-size: 26px;
+  }
+
+  .print-report .print-meta {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px 18px;
+    margin: 18px 0;
+    padding: 12px 0;
+    border-top: 1px solid #bbb;
+    border-bottom: 1px solid #bbb;
+    color: #333;
+  }
+
+  .print-report table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 14px;
+  }
+
+  .print-report th,
+  .print-report td {
+    padding: 8px;
+    border: 1px solid #bbb;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  .print-report th {
+    background: #f0f0f0;
+  }
+
+  .print-report .print-footnote {
+    margin-top: 18px;
+    color: #666;
+    font-size: 12px;
   }
 }
