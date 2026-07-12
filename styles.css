@@ -690,58 +690,101 @@ input[type="date"]::-webkit-date-and-time-value {
   .print-root {
     display: block;
     padding: 0;
-    font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+    font: 12px/1.35 "Microsoft YaHei", "Segoe UI", sans-serif;
   }
 
   .print-report {
-    max-width: 760px;
+    max-width: 186mm;
     margin: 0 auto;
   }
 
+  .print-report-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: baseline;
+    border-bottom: 1px solid #111;
+    margin-bottom: 8px;
+    padding-bottom: 5px;
+  }
+
   .print-report h1 {
-    margin: 0 0 8px;
-    font-size: 26px;
+    margin: 0;
+    font-size: 18px;
   }
 
   .print-report h2 {
-    margin: 22px 0 6px;
-    font-size: 21px;
+    margin: 0;
+    font-size: 15px;
   }
 
   .print-project {
-    break-after: page;
-    page-break-after: always;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin: 0 0 10px;
+    padding-top: 6px;
+    border-top: 1px solid #bbb;
   }
 
   .print-project:last-of-type {
-    break-after: auto;
-    page-break-after: auto;
+    margin-bottom: 0;
   }
 
   .print-report .print-meta {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px 18px;
-    margin: 18px 0;
-    padding: 12px 0;
-    border-top: 1px solid #bbb;
-    border-bottom: 1px solid #bbb;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin: 5px 0;
     color: #333;
+    font-size: 11px;
+  }
+
+  .print-project-title {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: baseline;
+  }
+
+  .print-project-title strong {
+    font-size: 14px;
+  }
+
+  .print-project-subtitle {
+    margin: 2px 0 0;
+    color: #444;
   }
 
   .print-report table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 14px;
+    table-layout: fixed;
   }
 
   .print-report th,
   .print-report td {
-    padding: 8px;
+    padding: 4px 5px;
     border: 1px solid #bbb;
     text-align: left;
     vertical-align: top;
     overflow-wrap: anywhere;
+  }
+
+  .print-report th:nth-child(1),
+  .print-report td:nth-child(1) {
+    width: 24px;
+    text-align: center;
+  }
+
+  .print-report th:nth-child(3),
+  .print-report td:nth-child(3) {
+    width: 42px;
+    text-align: right;
+  }
+
+  .print-report th:nth-child(4),
+  .print-report td:nth-child(4) {
+    width: 96px;
   }
 
   .print-report th {
@@ -749,8 +792,8 @@ input[type="date"]::-webkit-date-and-time-value {
   }
 
   .print-report .print-footnote {
-    margin-top: 18px;
+    margin-top: 8px;
     color: #666;
-    font-size: 12px;
+    font-size: 10px;
   }
 }

@@ -518,56 +518,39 @@ function exportData() {
 
 function exportProjectMarkdown(project) {
   const markdown = projectToMarkdown(project);
-  const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${safeFileName(project.name)}-${todayISO()}.md`;
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadTextFile(`${safeFileName(project.name)}-${todayISO()}.md`, markdown, "text/markdown;charset=utf-8");
 }
 
 function exportProjectsMarkdown(projects) {
   if (!projects.length) return alert("请先选择要导出的项目。");
   const markdown = projects.map(projectToMarkdown).join("\n\n---\n\n");
-  const blob = new Blob([markdown], { type: "text/markdown;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `selected-projects-${todayISO()}.md`;
-  a.click();
-  URL.revokeObjectURL(url);
+  downloadTextFile(`selected-projects-${todayISO()}.md`, markdown, "text/markdown;charset=utf-8");
 }
+
 
 function projectToMarkdown(project) {
   const status = projectStatus(project);
   const progress = projectProgress(project);
-  const rows = project.tasks.map((task, index) => {
+  const tasks = project.tasks.map((task, index) => {
     const status = taskStatus(task);
     const done = task.done ? "x" : " ";
     const completedAt = task.completedAt || "-";
-    return `| ${index + 1} | [${done}] ${escapeMarkdown(task.name)} | ${task.weight}% | ${task.dueDate || "-"} | ${completedAt} | ${status.text} | ${escapeMarkdown(task.note || "-")} |`;
+    const note = task.note ? `\n  - 备注：${escapeMarkdown(task.note)}` : "";
+    return `${index + 1}. [${done}] ${escapeMarkdown(task.name)}（${task.weight}%）\n  - 计划：${task.dueDate || "-"}；完成：${completedAt}；状态：${escapeMarkdown(status.text)}${note}`;
   }).join("\n");
 
   return [
     `# ${escapeMarkdown(project.name)}`,
     "",
-    `- 模板：${escapeMarkdown(project.templateName || "自定义项目")}`,
-    `- 项目状态：${status.text}`,
-    `- 项目进度：${progress}%`,
-    `- 开始日期：${project.startDate || "-"}`,
-    `- 预计完成：${project.dueDate || "-"}`,
-    `- 导出日期：${todayISO()}`,
+    `> ${escapeMarkdown(status.text)} · ${progress}% · ${project.startDate || "-"} 至 ${project.dueDate || "-"} · ${escapeMarkdown(project.templateName || "自定义项目")}`,
+    "",
+    `导出日期：${todayISO()}`,
     "",
     "## 子任务",
     "",
-    "| 序号 | 子任务 | 占比 | 预计完成 | 实际完成 | 状态 | 备注 |",
-    "| --- | --- | ---: | --- | --- | --- | --- |",
-    rows || "| - | - | - | - | - | - | - |",
+    tasks || "- 暂无子任务",
     "",
-    "## 备注",
-    "",
-    "- 数据来自轻任务模板 App。"
+    "数据来自轻任务模板 App。"
   ].join("\n");
 }
 
@@ -576,16 +559,47 @@ function printProject(project) {
 }
 
 function printProjects(projects) {
-  if (!projects.length) return alert("请先选择要打印的项目。");
-  printRoot.innerHTML = `
+  if (!projects.length) return alert("请先选择要打印的项目");
+  const reportHtml = projectsToPrintHtml(projects);
+  const printWindow = window.open("", "_blank");
+
+  if (printWindow) {
+    printWindow.document.open();
+    printWindow.document.write(reportHtml);
+    printWindow.document.close();
+    printWindow.focus();
+    window.setTimeout(() => printWindow.print(), 350);
+    return;
+  }
+
+  printRoot.innerHTML = printReportBody(projects);
+  window.setTimeout(() => window.print(), 50);
+}
+
+function projectsToPrintHtml(projects) {
+  return `<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>项目报告-${todayISO()}</title>
+    <style>${printDocumentCss()}</style>
+  </head>
+  <body>${printReportBody(projects)}</body>
+</html>`;
+}
+
+function printReportBody(projects) {
+  return `
     <article class="print-report">
-      <h1>项目报告</h1>
-      <p>共 ${projects.length} 个项目 · 生成日期 ${todayISO()}</p>
+      <header class="print-report-head">
+        <h1>项目报告</h1>
+        <p>共 ${projects.length} 个项目 · 生成日期 ${todayISO()}</p>
+      </header>
       ${projects.map(projectToPrintSection).join("")}
       <p class="print-footnote">由轻任务模板 App 生成。</p>
     </article>
   `;
-  window.print();
 }
 
 function projectToPrintSection(project) {
@@ -593,25 +607,23 @@ function projectToPrintSection(project) {
   const progress = projectProgress(project);
   return `
     <section class="print-project">
-      <h2>${escapeHtml(project.name)}</h2>
-      <p>${escapeHtml(project.templateName || "自定义项目")}</p>
+      <div class="print-project-title">
+        <h2>${escapeHtml(project.name)}</h2>
+        <strong>${progress}%</strong>
+      </div>
+      <p class="print-project-subtitle">${escapeHtml(project.templateName || "自定义项目")} · ${escapeHtml(status.text)}</p>
       <div class="print-meta">
-        <div><strong>项目状态：</strong>${escapeHtml(status.text)}</div>
-        <div><strong>项目进度：</strong>${progress}%</div>
-        <div><strong>开始日期：</strong>${escapeHtml(project.startDate || "-")}</div>
-        <div><strong>预计完成：</strong>${escapeHtml(project.dueDate || "-")}</div>
-        <div><strong>导出日期：</strong>${todayISO()}</div>
-        <div><strong>子任务数：</strong>${project.tasks.length}</div>
+        <span>开始 ${escapeHtml(project.startDate || "-")}</span>
+        <span>预计 ${escapeHtml(project.dueDate || "-")}</span>
+        <span>子任务 ${project.tasks.length}</span>
       </div>
       <table>
         <thead>
           <tr>
-            <th>序号</th>
+            <th>#</th>
             <th>子任务</th>
             <th>占比</th>
-            <th>预计完成</th>
-            <th>实际完成</th>
-            <th>状态</th>
+            <th>计划/完成</th>
             <th>备注</th>
           </tr>
         </thead>
@@ -621,12 +633,10 @@ function projectToPrintSection(project) {
             return `
               <tr>
                 <td>${index + 1}</td>
-                <td>${task.done ? "☑" : "☐"} ${escapeHtml(task.name)}</td>
+                <td>${task.done ? "✓" : "□"} ${escapeHtml(task.name)}</td>
                 <td>${task.weight}%</td>
-                <td>${escapeHtml(task.dueDate || "-")}</td>
-                <td>${escapeHtml(task.completedAt || "-")}</td>
-                <td>${escapeHtml(status.text)}</td>
-                <td>${escapeHtml(task.note || "-")}</td>
+                <td>${escapeHtml(task.dueDate || "-")} / ${escapeHtml(task.completedAt || "-")}<br><small>${escapeHtml(status.text)}</small></td>
+                <td>${escapeHtml(task.note || "")}</td>
               </tr>
             `;
           }).join("")}
@@ -634,6 +644,42 @@ function projectToPrintSection(project) {
       </table>
     </section>
   `;
+}
+
+function printDocumentCss() {
+  return `
+    @page { size: A4; margin: 10mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #111; font: 12px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+    .print-report { max-width: 186mm; margin: 0 auto; }
+    .print-report-head { display: flex; justify-content: space-between; gap: 16px; align-items: baseline; border-bottom: 1px solid #111; margin-bottom: 8px; padding-bottom: 5px; }
+    h1 { margin: 0; font-size: 18px; }
+    h2 { margin: 0; font-size: 15px; }
+    p { margin: 0; }
+    .print-project { break-inside: avoid; page-break-inside: avoid; margin: 0 0 10px; padding-top: 6px; border-top: 1px solid #bbb; }
+    .print-project-title { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+    .print-project-title strong { font-size: 14px; }
+    .print-project-subtitle { margin-top: 2px; color: #444; }
+    .print-meta { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 5px 0; color: #333; font-size: 11px; }
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th, td { border: 1px solid #bbb; padding: 4px 5px; text-align: left; vertical-align: top; overflow-wrap: anywhere; }
+    th { background: #f2f2f2; font-weight: 700; }
+    th:nth-child(1), td:nth-child(1) { width: 24px; text-align: center; }
+    th:nth-child(3), td:nth-child(3) { width: 42px; text-align: right; }
+    th:nth-child(4), td:nth-child(4) { width: 96px; }
+    small { color: #555; }
+    .print-footnote { margin-top: 8px; color: #666; font-size: 10px; }
+  `;
+}
+
+function downloadTextFile(fileName, content, type) {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 function escapeMarkdown(value) {
