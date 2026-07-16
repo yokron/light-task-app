@@ -80,23 +80,20 @@
 
     <template id="taskRowTemplate">
       <div class="task-row">
-        <label>
-          <span>子任务</span>
-          <input data-field="name" required>
+        <label class="task-name-field">
+          <span class="sr-only">子任务</span>
+          <input data-field="name" required placeholder="输入子任务">
         </label>
-        <label>
-          <span>占比 %</span>
-          <input data-field="weight" type="number" min="1" max="100" required>
-        </label>
-        <label>
-          <span>默认天数</span>
-          <input data-field="days" type="number" min="1" max="365" required>
-        </label>
+        <button class="task-drag" type="button" aria-label="调整任务顺序">☷</button>
         <button class="icon-button remove-task" type="button" aria-label="删除子任务">×</button>
-        <label class="task-note-field">
-          <span>备注</span>
-          <textarea data-field="note" placeholder="可选：默认说明或注意事项"></textarea>
-        </label>
+        <details class="task-advanced">
+          <summary>更多设置</summary>
+          <div class="task-advanced-grid">
+            <label><span>占比 %</span><input data-field="weight" type="number" min="1" max="100" required></label>
+            <label><span>默认天数</span><input data-field="days" type="number" min="1" max="365" required></label>
+            <label class="task-note-field"><span>备注</span><textarea data-field="note" placeholder="可选备注"></textarea></label>
+          </div>
+        </details>
       </div>
     </template>
 

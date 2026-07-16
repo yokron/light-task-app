@@ -346,13 +346,19 @@ function openProjectEditor(project = null, template = null) {
         <div class="task-editor" id="projectTaskEditor">
           ${sourceTasks.map((task) => `
             <div class="task-row project-task-row" data-id="${escapeHtml(task.id || uid())}">
-              <label><span>子任务</span><input data-field="name" required value="${escapeHtml(task.name)}"></label>
-              <label><span>占比 %</span><input data-field="weight" type="number" min="1" max="100" required value="${task.weight}"></label>
-              <label><span>预计日期</span><input data-field="dueDate" type="date" required value="${task.dueDate}"></label>
+              <label class="task-done-field"><span class="sr-only">完成</span><input data-field="done" type="checkbox" aria-label="完成任务" ${task.done ? "checked" : ""}></label>
+              <label class="task-name-field"><span class="sr-only">子任务</span><input data-field="name" required value="${escapeHtml(task.name)}" placeholder="输入子任务"></label>
+              <button class="task-drag" type="button" aria-label="调整任务顺序">☷</button>
               <button class="icon-button remove-task" type="button" aria-label="删除子任务">×</button>
-              <label class="task-done-field"><span>完成</span><input data-field="done" type="checkbox" ${task.done ? "checked" : ""}></label>
-              <label class="task-completed-field"><span>实际完成日期</span><input data-field="completedAt" type="date" value="${escapeHtml(task.completedAt || "")}" ${task.done ? "" : "disabled"}></label>
-              <label class="task-note-field"><span>备注</span><textarea data-field="note" placeholder="说明进展、滞后原因或需要协同的事项">${escapeHtml(task.note || "")}</textarea></label>
+              <details class="task-advanced">
+                <summary>更多设置</summary>
+                <div class="task-advanced-grid">
+                  <label><span>占比 %</span><input data-field="weight" type="number" min="1" max="100" required value="${task.weight}"></label>
+                  <label><span>预计日期</span><input data-field="dueDate" type="date" required value="${task.dueDate}"></label>
+                  <label class="task-completed-field"><span>实际完成日期</span><input data-field="completedAt" type="date" value="${escapeHtml(task.completedAt || "")}" ${task.done ? "" : "disabled"}></label>
+                  <label class="task-note-field"><span>备注</span><textarea data-field="note" placeholder="说明进展、滞后原因或需要协同的事项">${escapeHtml(task.note || "")}</textarea></label>
+                </div>
+              </details>
             </div>
           `).join("")}
         </div>
