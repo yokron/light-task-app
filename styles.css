@@ -787,6 +787,7 @@ input[type="date"]::-webkit-date-and-time-value {
   font-weight: 800;
   line-height: 1;
   list-style: none;
+  -webkit-tap-highlight-color: transparent;
 }
 
 .task-tool summary::-webkit-details-marker {
@@ -803,7 +804,9 @@ input[type="date"]::-webkit-date-and-time-value {
   z-index: 20;
   top: 40px;
   right: 0;
-  width: 170px;
+  width: min(190px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  box-sizing: border-box;
   padding: 10px;
   border: 1px solid #d8ded8;
   border-radius: 8px;
@@ -811,8 +814,36 @@ input[type="date"]::-webkit-date-and-time-value {
   box-shadow: 0 12px 30px rgba(23, 35, 31, 0.16);
 }
 
+.task-tool:first-child label {
+  right: auto;
+  left: 0;
+}
+
+.task-tool:nth-child(2) label {
+  right: auto;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 .task-tool input {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   min-height: 38px;
+  box-sizing: border-box;
+  font-size: 16px;
+}
+
+.task-tool input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 8px;
+}
+
+.task-tool input[type="date"]::-webkit-date-and-time-value {
+  min-width: 0;
+  text-align: left;
 }
 
 .task-advanced {
@@ -865,6 +896,15 @@ input[type="date"]::-webkit-date-and-time-value {
     grid-column: 2;
     justify-content: flex-start;
     min-width: 0;
+  }
+
+  .task-tool label,
+  .task-tool:first-child label,
+  .task-tool:nth-child(2) label,
+  .task-tool:nth-child(3) label {
+    right: auto;
+    left: 0;
+    transform: none;
   }
 
   .task-advanced-grid {

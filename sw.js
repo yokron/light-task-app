@@ -1,4 +1,4 @@
-const CACHE_NAME = "light-task-app-v20";
+const CACHE_NAME = "light-task-app-v21";
 const ASSETS = [
   "./",
   "./index.html",

@@ -354,11 +354,21 @@ function openProjectEditor(project = null, template = null) {
                   <label><span>占比 %</span><input data-field="weight" type="number" min="1" max="100" required value="${task.weight}"></label>
                 </details>
                 <details class="task-tool">
-                  <summary aria-label="预计完成日期">&#9651;</summary>
+                  <summary aria-label="预计完成日期" title="预计完成日期">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v6.5M13 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2"/>
+                      <circle cx="17" cy="17" r="4"/><path d="M17 15v2l1.5 1"/>
+                    </svg>
+                  </summary>
                   <label><span>预计日期</span><input data-field="dueDate" type="date" required value="${task.dueDate}"></label>
                 </details>
                 <details class="task-tool">
-                  <summary aria-label="实际完成日期">&#9661;</summary>
+                  <summary aria-label="实际完成日期" title="实际完成日期">
+                    <svg aria-hidden="true" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v5M12 20H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2"/>
+                      <path d="m15 18 2 2 4-5"/>
+                    </svg>
+                  </summary>
                   <label class="task-completed-field"><span>实际完成日期</span><input data-field="completedAt" type="date" value="${escapeHtml(task.completedAt || "")}" ${task.done ? "" : "disabled"}></label>
                 </details>
               </div>
