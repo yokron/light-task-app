@@ -348,7 +348,7 @@ function openProjectEditor(project = null, template = null) {
             <div class="task-row project-task-row" data-id="${escapeHtml(task.id || uid())}">
               <label class="task-done-field"><span class="sr-only">完成</span><input data-field="done" type="checkbox" aria-label="完成任务" ${task.done ? "checked" : ""}></label>
               <label class="task-name-field"><span class="sr-only">子任务</span><input data-field="name" required value="${escapeHtml(task.name)}" placeholder="输入子任务"></label>
-              <button class="task-drag" type="button" aria-label="调整任务顺序">☷</button>
+              <span class="task-drag" aria-hidden="true">☷</span>
               <button class="icon-button remove-task" type="button" aria-label="删除子任务">×</button>
               <details class="task-advanced">
                 <summary>更多设置</summary>

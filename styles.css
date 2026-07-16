@@ -754,8 +754,7 @@ input[type="date"]::-webkit-date-and-time-value {
   font-size: 20px;
 }
 
-.task-drag { cursor: grab; }
-.task-drag:active { cursor: grabbing; }
+.task-drag { cursor: default; text-align: center; }
 .remove-task { color: var(--red); font-size: 24px; }
 
 .task-advanced {
