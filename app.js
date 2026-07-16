@@ -625,18 +625,15 @@ function roadmapReportBody(projects) {
 function roadmapProjectRow(project, start, totalDays) {
   const status = projectStatus(project);
   const progress = projectProgress(project);
-  let labelLeft = 0;
   const segments = project.tasks.map((task, index) => {
     const width = Math.max(0, Number(task.weight) || 0);
     const tone = task.done ? "complete" : "open";
     return `<div class="roadmap-segment ${tone}" style="width:${width}%">${task.done ? '<span class="roadmap-complete-mark">✓</span>' : ''}<span class="roadmap-node">${index + 1}</span></div>`;
   }).join("");
-  const labels = project.tasks.map((task, index) => {
+  const labels = project.tasks.map((task) => {
     const width = Math.max(0, Number(task.weight) || 0);
-    const left = labelLeft;
-    labelLeft += width;
     const completion = task.done ? (task.completedAt || "已完成") : "待完成";
-    return `<div class="roadmap-task-detail" style="left:${left}%;width:${width}%"><span class="roadmap-task-number">${index + 1}</span><div><strong>${escapeHtml(task.name)}</strong><small>${escapeHtml(completion)}</small></div></div>`;
+    return `<div class="roadmap-task-detail" style="width:${width}%"><strong>${escapeHtml(task.name)}</strong><small>${escapeHtml(completion)}</small></div>`;
   }).join("");
 
   return `<section class="roadmap-project">
@@ -768,12 +765,11 @@ function roadmapDocumentCss() {
     .roadmap-segment:last-child { border-right: 0; }
     .roadmap-segment.complete { border: 2px solid #1b7f65; background: #1b7f65; }
     .roadmap-segment.open { background: #fffdf7; }
-    .roadmap-segment-labels { position: relative; min-width: 0; height: 38px; margin-top: 28px; }
-    .roadmap-task-detail { position: absolute; top: 0; display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 5px; align-items: start; min-width: 42px; max-width: 140px; padding-right: 4px; }
-    .roadmap-task-detail strong, .roadmap-task-detail small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .roadmap-task-detail strong { color: #435149; font-size: 9px; font-weight: 700; line-height: 1.2; }
-    .roadmap-task-detail small { margin-top: 2px; color: #66736d; font-size: 8px; line-height: 1.1; }
-    .roadmap-task-number { width: 18px; height: 18px; border: 1px solid #435149; border-radius: 50%; background: #fffdf7; color: #435149; font-size: 9px; line-height: 16px; text-align: center; }
+    .roadmap-segment-labels { display: flex; min-width: 0; min-height: 34px; margin-top: 22px; }
+    .roadmap-task-detail { min-width: 0; box-sizing: border-box; padding: 0 3px; text-align: center; }
+    .roadmap-task-detail strong, .roadmap-task-detail small { display: block; min-width: 0; }
+    .roadmap-task-detail strong { overflow-wrap: anywhere; color: #435149; font-size: 8.5px; font-weight: 700; line-height: 1.15; }
+    .roadmap-task-detail small { margin-top: 2px; overflow: hidden; color: #66736d; font-size: 7.5px; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
     .roadmap-complete-mark { position: absolute; inset: 0; color: #17231f; font-size: 12px; line-height: 18px; text-align: center; }
     @media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .roadmap-segment.complete { border-width: 2px; } .roadmap-complete-mark { font-weight: 800; } }
     .roadmap-node { position: absolute; z-index: 3; top: 25px; right: -8px; width: 16px; height: 16px; border: 1px solid #435149; border-radius: 50%; background: #fffdf7; color: #435149; font-size: 9px; line-height: 14px; text-align: center; }
