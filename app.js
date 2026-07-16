@@ -750,7 +750,7 @@ function roadmapDocumentCss() {
     .roadmap-task-detail { flex: 0 0 auto; min-width: 0; box-sizing: border-box; padding: 0 3px; text-align: center; }
     .roadmap-task-detail strong, .roadmap-task-detail small { display: block; min-width: 0; }
     .roadmap-task-detail strong { overflow-wrap: anywhere; color: #435149; font-size: 8.5px; font-weight: 700; line-height: 1.15; }
-    .roadmap-task-detail small { margin-top: 2px; overflow: hidden; color: #66736d; font-size: 7.5px; line-height: 1.1; text-overflow: ellipsis; white-space: nowrap; }
+    .roadmap-task-detail small { margin-top: 2px; overflow-wrap: anywhere; color: #66736d; font-size: 7.5px; line-height: 1.1; white-space: normal; }
     @media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
     .roadmap-node { position: absolute; inset: 0; display: grid; place-items: center; color: #435149; font-size: 8px; font-weight: 700; line-height: 1; text-align: center; }
     .roadmap-segment.complete .roadmap-node { color: #fff; }
