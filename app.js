@@ -336,7 +336,7 @@ function openProjectEditor(project = null, template = null) {
 
   dialogTitle.textContent = project ? "编辑项目" : "新建项目";
   editorFields.innerHTML = `
-    <div class="form-grid">
+    <div class="form-grid project-editor-form">
       <label><span>项目名称</span><input name="name" required value="${escapeHtml(project?.name || "")}" placeholder="例如：7 月课程上线"></label>
       <label><span>模板</span><input name="templateName" readonly value="${escapeHtml(project?.templateName || template?.name || "自定义")}"></label>
       <label><span>开始日期</span><input name="startDate" type="date" required value="${startDate}"></label>
@@ -348,15 +348,25 @@ function openProjectEditor(project = null, template = null) {
             <div class="task-row project-task-row" data-id="${escapeHtml(task.id || uid())}">
               <label class="task-done-field"><span class="sr-only">完成</span><input data-field="done" type="checkbox" aria-label="完成任务" ${task.done ? "checked" : ""}></label>
               <label class="task-name-field"><span class="sr-only">子任务</span><input data-field="name" required value="${escapeHtml(task.name)}" placeholder="输入子任务"></label>
-              <span class="task-drag" aria-hidden="true">☷</span>
-              <button class="icon-button remove-task" type="button" aria-label="删除子任务">×</button>
-              <details class="task-advanced">
-                <summary>更多设置</summary>
-                <div class="task-advanced-grid">
+              <div class="task-inline-tools">
+                <details class="task-tool">
+                  <summary aria-label="占比">%</summary>
                   <label><span>占比 %</span><input data-field="weight" type="number" min="1" max="100" required value="${task.weight}"></label>
+                </details>
+                <details class="task-tool">
+                  <summary aria-label="预计完成日期">&#9651;</summary>
                   <label><span>预计日期</span><input data-field="dueDate" type="date" required value="${task.dueDate}"></label>
+                </details>
+                <details class="task-tool">
+                  <summary aria-label="实际完成日期">&#9661;</summary>
                   <label class="task-completed-field"><span>实际完成日期</span><input data-field="completedAt" type="date" value="${escapeHtml(task.completedAt || "")}" ${task.done ? "" : "disabled"}></label>
+                </details>
+              </div>
+              <details class="task-advanced">
+                <summary>更多</summary>
+                <div class="task-advanced-grid">
                   <label class="task-note-field"><span>备注</span><textarea data-field="note" placeholder="说明进展、滞后原因或需要协同的事项">${escapeHtml(task.note || "")}</textarea></label>
+                  <button class="icon-button remove-task" type="button" aria-label="删除子任务">×</button>
                 </div>
               </details>
             </div>
@@ -605,14 +615,18 @@ function roadmapReportBody(projects) {
 function roadmapProjectRow(project, start, totalDays) {
   const status = projectStatus(project);
   const progress = projectProgress(project);
+  let labelLeft = 0;
   const segments = project.tasks.map((task, index) => {
     const width = Math.max(0, Number(task.weight) || 0);
     const tone = task.done ? "complete" : "open";
     return `<div class="roadmap-segment ${tone}" style="width:${width}%">${task.done ? '<span class="roadmap-complete-mark">✓</span>' : ''}<span class="roadmap-node">${index + 1}</span></div>`;
   }).join("");
   const labels = project.tasks.map((task, index) => {
+    const width = Math.max(0, Number(task.weight) || 0);
+    const left = labelLeft;
+    labelLeft += width;
     const completion = task.done ? (task.completedAt || "已完成") : "待完成";
-    return `<div class="roadmap-task-detail"><span class="roadmap-task-number">${index + 1}</span><div><strong>${escapeHtml(task.name)}</strong><small>${escapeHtml(completion)}</small></div></div>`;
+    return `<div class="roadmap-task-detail" style="left:${left}%;width:${width}%"><span class="roadmap-task-number">${index + 1}</span><div><strong>${escapeHtml(task.name)}</strong><small>${escapeHtml(completion)}</small></div></div>`;
   }).join("");
 
   return `<section class="roadmap-project">
@@ -744,9 +758,9 @@ function roadmapDocumentCss() {
     .roadmap-segment:last-child { border-right: 0; }
     .roadmap-segment.complete { border: 2px solid #1b7f65; background: #1b7f65; }
     .roadmap-segment.open { background: #fffdf7; }
-    .roadmap-segment-labels { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px 12px; min-width: 0; margin-top: 28px; }
-    .roadmap-task-detail { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 5px; align-items: start; min-width: 0; }
-    .roadmap-task-detail strong, .roadmap-task-detail small { display: block; overflow-wrap: anywhere; white-space: normal; }
+    .roadmap-segment-labels { position: relative; min-width: 0; height: 38px; margin-top: 28px; }
+    .roadmap-task-detail { position: absolute; top: 0; display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 5px; align-items: start; min-width: 42px; max-width: 140px; padding-right: 4px; }
+    .roadmap-task-detail strong, .roadmap-task-detail small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .roadmap-task-detail strong { color: #435149; font-size: 9px; font-weight: 700; line-height: 1.2; }
     .roadmap-task-detail small { margin-top: 2px; color: #66736d; font-size: 8px; line-height: 1.1; }
     .roadmap-task-number { width: 18px; height: 18px; border: 1px solid #435149; border-radius: 50%; background: #fffdf7; color: #435149; font-size: 9px; line-height: 16px; text-align: center; }
