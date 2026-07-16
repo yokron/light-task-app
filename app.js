@@ -168,7 +168,6 @@ function renderProjects() {
         <button class="secondary-button" type="button" data-action="select-all-projects">全选</button>
         <button class="secondary-button" type="button" data-action="clear-project-selection">清空</button>
         <button class="primary-button" type="button" data-action="print-roadmap-selected-projects">打印项目路线图</button>
-        <button class="secondary-button" type="button" data-action="print-gantt-selected-projects">打印详细甘特图</button>
       </div>
     </div>
   `;
@@ -516,9 +515,9 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
-function printReport(projects, type) {
+function printRoadmap(projects) {
   if (!projects.length) return alert("请先选择要打印的项目");
-  const reportHtml = type === "gantt" ? projectsToGanttHtml(projects) : projectsToRoadmapHtml(projects);
+  const reportHtml = projectsToRoadmapHtml(projects);
   const printWindow = window.open("", "_blank");
 
   if (printWindow) {
@@ -530,7 +529,7 @@ function printReport(projects, type) {
     return;
   }
 
-  printRoot.innerHTML = type === "gantt" ? ganttReportBody(projects) : roadmapReportBody(projects);
+  printRoot.innerHTML = roadmapReportBody(projects);
   window.setTimeout(() => window.print(), 50);
 }
 
@@ -603,7 +602,7 @@ function roadmapProjectRow(project, start, totalDays) {
   const segments = project.tasks.map((task) => {
     const width = Math.max(0, Number(task.weight) || 0);
     const tone = task.done ? "complete" : "open";
-    return `<div class="roadmap-segment ${tone}" style="width:${width}%"></div>`;
+    return `<div class="roadmap-segment ${tone}" style="width:${width}%">${task.done ? '<span class="roadmap-complete-mark">✓</span>' : ''}</div>`;
   }).join("");
   const labels = project.tasks.map((task, index) => {
     const width = Math.max(0, Number(task.weight) || 0);
@@ -738,13 +737,15 @@ function roadmapDocumentCss() {
     .roadmap-segments { height: 22px; border: 1px solid #86958c; background: #f7faf7; }
     .roadmap-segment { position: relative; min-width: 3px; border-right: 1px solid #86958c; background: #fffdf7; }
     .roadmap-segment:last-child { border-right: 0; }
-    .roadmap-segment.complete { background: #1b7f65; }
+    .roadmap-segment.complete { border: 2px solid #1b7f65; background: #1b7f65; }
     .roadmap-segment.open { background: #fffdf7; }
     .roadmap-segment-label { position: relative; min-width: 0; padding: 9px 5px 0; text-align: center; border-left: 1px solid #c9d0c9; }
     .roadmap-segment-label:first-child { border-left: 0; }
-    .roadmap-segment-label strong, .roadmap-segment-label small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .roadmap-segment-label strong { color: #435149; font-size: 9px; font-weight: 700; }
-    .roadmap-segment-label small { margin-top: 2px; color: #66736d; font-size: 8px; }
+    .roadmap-segment-label strong, .roadmap-segment-label small { display: block; overflow-wrap: anywhere; white-space: normal; }
+    .roadmap-segment-label strong { color: #435149; font-size: 9px; font-weight: 700; line-height: 1.15; }
+    .roadmap-segment-label small { margin-top: 3px; color: #66736d; font-size: 8px; line-height: 1.1; }
+    .roadmap-complete-mark { position: absolute; inset: 0; color: #17231f; font-size: 12px; line-height: 18px; text-align: center; }
+    @media print { * { -webkit-print-color-adjust: exact; print-color-adjust: exact; } .roadmap-segment.complete { border-width: 2px; } .roadmap-complete-mark { font-weight: 800; } }
     .roadmap-node { position: absolute; top: -9px; left: 0; width: 16px; height: 16px; transform: translateX(-50%); border: 1px solid #435149; border-radius: 50%; background: #fffdf7; color: #435149; font-size: 9px; line-height: 14px; text-align: center; }
     .roadmap-segment-label:last-child .roadmap-node { left: 100%; }
     .roadmap-bar { position: absolute; z-index: 2; min-width: 4px; height: 18px; margin-top: 8px; overflow: hidden; border-radius: 4px; color: #fff; font-size: 10px; line-height: 18px; white-space: nowrap; text-overflow: ellipsis; }
@@ -929,8 +930,7 @@ document.addEventListener("click", (event) => {
     selectedProjectIds.clear();
     render();
   }
-  if (action === "print-roadmap-selected-projects") printReport(selectedProjects(), "roadmap");
-  if (action === "print-gantt-selected-projects") printReport(selectedProjects(), "gantt");
+  if (action === "print-roadmap-selected-projects") printRoadmap(selectedProjects());
   if (action === "project-from-template") {
     const template = state.templates.find((item) => item.id === target.dataset.id);
     openProjectEditor(null, template);

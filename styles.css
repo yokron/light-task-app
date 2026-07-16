@@ -893,14 +893,20 @@ input[type="date"]::-webkit-date-and-time-value {
   .roadmap-segments { height: 22px; border: 1px solid #86958c; background: #f7faf7; }
   .roadmap-segment { position: relative; min-width: 3px; border-right: 1px solid #86958c; background: #fffdf7; }
   .roadmap-segment:last-child { border-right: 0; }
-  .roadmap-segment.complete { background: #1b7f65; }
+  .roadmap-segment.complete { border: 2px solid #1b7f65; background: #1b7f65; }
   .roadmap-segment.open { background: #fffdf7; }
   .roadmap-segment-label { position: relative; min-width: 0; padding: 9px 5px 0; text-align: center; border-left: 1px solid #c9d0c9; }
   .roadmap-segment-label:first-child { border-left: 0; }
   .roadmap-segment-label strong,
-  .roadmap-segment-label small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .roadmap-segment-label strong { color: #435149; font-size: 9px; font-weight: 700; }
-  .roadmap-segment-label small { margin-top: 2px; color: #66736d; font-size: 8px; }
+  .roadmap-segment-label small { display: block; overflow-wrap: anywhere; white-space: normal; }
+  .roadmap-segment-label strong { color: #435149; font-size: 9px; font-weight: 700; line-height: 1.15; }
+  .roadmap-segment-label small { margin-top: 3px; color: #66736d; font-size: 8px; line-height: 1.1; }
+  .roadmap-complete-mark { position: absolute; inset: 0; color: #17231f; font-size: 12px; line-height: 18px; text-align: center; }
+  @media print {
+    * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .roadmap-segment.complete { border-width: 2px; }
+    .roadmap-complete-mark { font-weight: 800; }
+  }
   .roadmap-node { position: absolute; top: -9px; left: 0; width: 16px; height: 16px; transform: translateX(-50%); border: 1px solid #435149; border-radius: 50%; background: #fffdf7; color: #435149; font-size: 9px; line-height: 14px; text-align: center; }
   .roadmap-segment-label:last-child .roadmap-node { left: 100%; }
 
