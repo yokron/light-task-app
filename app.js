@@ -168,6 +168,7 @@ function renderProjects() {
         <button class="secondary-button" type="button" data-action="select-all-projects">全选</button>
         <button class="secondary-button" type="button" data-action="clear-project-selection">清空</button>
         <button class="primary-button" type="button" data-action="print-selected-projects">打印选中</button>
+        <button class="primary-button" type="button" data-action="roadmap-selected-projects">导出项目路线图</button>
         <button class="secondary-button" type="button" data-action="export-selected-md">导出选中 Markdown</button>
       </div>
     </div>
@@ -576,6 +577,153 @@ function printProjects(projects) {
   window.setTimeout(() => window.print(), 50);
 }
 
+function exportRoadmap(projects) {
+  if (!projects.length) return alert("请先选择要导出的项目。");
+  const roadmapWindow = window.open("", "_blank");
+  const reportHtml = projectsToRoadmapHtml(projects);
+
+  if (roadmapWindow) {
+    roadmapWindow.document.open();
+    roadmapWindow.document.write(reportHtml);
+    roadmapWindow.document.close();
+    roadmapWindow.focus();
+    return;
+  }
+
+  printRoot.innerHTML = roadmapReportBody(projects);
+  window.setTimeout(() => window.print(), 50);
+}
+
+function projectsToRoadmapHtml(projects) {
+  return `<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>项目路线图-${todayISO()}</title>
+    <style>${roadmapDocumentCss()}</style>
+  </head>
+  <body>${roadmapReportBody(projects)}</body>
+</html>`;
+}
+
+function roadmapReportBody(projects) {
+  const dates = projects.flatMap((project) => [project.startDate, project.dueDate, ...project.tasks.map((task) => task.dueDate)])
+    .filter(Boolean)
+    .sort();
+  if (!dates.length) return `<p>没有可用于路线图的日期。</p>`;
+
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+  const totalDays = Math.max(diffDays(end, start) + 1, 1);
+  const ticks = buildRoadmapTicks(start, end);
+  const tickHtml = ticks.map((tick) => {
+    const left = (diffDays(tick.date, start) / totalDays) * 100;
+    return `<span class="roadmap-tick" style="left:${left}%"><b>${escapeHtml(tick.label)}</b></span>`;
+  }).join("");
+
+  return `
+    <article class="roadmap-report">
+      <header class="roadmap-report-head">
+        <div>
+          <p class="roadmap-kicker">PROJECT ROADMAP</p>
+          <h1>项目路线图</h1>
+        </div>
+        <p>${projects.length} 个项目 · ${formatDate(start)} - ${formatDate(end)} · 生成于 ${todayISO()}</p>
+      </header>
+      <div class="roadmap-scale"><div class="roadmap-scale-inner">${tickHtml}</div></div>
+      <div class="roadmap-grid">
+        ${projects.map((project) => roadmapProjectRow(project, start, totalDays)).join("")}
+      </div>
+      <footer class="roadmap-legend">
+        <span><i class="legend-swatch complete"></i>已完成</span>
+        <span><i class="legend-swatch active"></i>进行中</span>
+        <span><i class="legend-swatch late"></i>已延期</span>
+        <span><i class="legend-milestone"></i>项目里程碑</span>
+      </footer>
+    </article>
+  `;
+}
+
+function roadmapProjectRow(project, start, totalDays) {
+  const projectStart = project.startDate || start;
+  const projectEnd = project.dueDate || projectStart;
+  const status = projectStatus(project);
+  const progress = projectProgress(project);
+  const taskBars = project.tasks.map((task) => {
+    const taskEnd = task.dueDate || projectEnd;
+    const taskStart = task.done && task.completedAt ? task.completedAt : projectStart;
+    const left = Math.max(0, (diffDays(taskStart, start) / totalDays) * 100);
+    const width = Math.max(1.4, ((diffDays(taskEnd, taskStart) + 1) / totalDays) * 100);
+    const tone = task.done ? "complete" : (diffDays(todayISO(), taskEnd) > 0 ? "late" : "active");
+    return `<div class="roadmap-bar ${tone}" style="left:${left}%;width:${Math.min(width, 100 - left)}%" title="${escapeHtml(task.name)}">
+      <span>${escapeHtml(task.name)}</span>
+    </div>`;
+  }).join("");
+  const milestoneLeft = Math.max(0, Math.min(100, (diffDays(projectEnd, start) / totalDays) * 100));
+
+  return `<section class="roadmap-project">
+    <div class="roadmap-project-label">
+      <strong>${escapeHtml(project.name)}</strong>
+      <span>${progress}% · ${escapeHtml(status.text)}</span>
+    </div>
+    <div class="roadmap-track">
+      <div class="roadmap-bar project-window" style="left:${Math.max(0, (diffDays(projectStart, start) / totalDays) * 100)}%;width:${Math.max(1.4, ((diffDays(projectEnd, projectStart) + 1) / totalDays) * 100)}%"></div>
+      ${taskBars}
+      <span class="roadmap-milestone" style="left:${milestoneLeft}%" title="项目截止：${escapeHtml(projectEnd)}"></span>
+    </div>
+  </section>`;
+}
+
+function buildRoadmapTicks(start, end) {
+  const ticks = [];
+  const cursor = new Date(`${start}T00:00:00`);
+  const last = new Date(`${end}T00:00:00`);
+  while (cursor <= last) {
+    const date = cursor.toISOString().slice(0, 10);
+    ticks.push({ date, label: formatDate(date) });
+    cursor.setDate(cursor.getDate() + (diffDays(end, start) > 45 ? 14 : 7));
+  }
+  if (ticks[ticks.length - 1]?.date !== end) ticks.push({ date: end, label: formatDate(end) });
+  return ticks;
+}
+
+function roadmapDocumentCss() {
+  return `
+    @page { size: A4 landscape; margin: 12mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #17231f; font: 12px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+    .roadmap-report { width: 100%; }
+    .roadmap-report-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; padding-bottom: 12px; border-bottom: 2px solid #17231f; }
+    .roadmap-kicker { margin: 0 0 3px; color: #1b7f65; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; }
+    h1 { margin: 0; font-size: 25px; }
+    .roadmap-report-head > p { margin: 0; color: #66736d; }
+    .roadmap-scale { margin-left: 148px; height: 34px; border-bottom: 1px solid #c9d0c9; }
+    .roadmap-scale-inner { position: relative; height: 100%; }
+    .roadmap-tick { position: absolute; bottom: 0; height: 100%; border-left: 1px solid #d9ded8; color: #66736d; }
+    .roadmap-tick b { position: absolute; top: 5px; left: 5px; white-space: nowrap; font-size: 10px; font-weight: 600; }
+    .roadmap-project { display: grid; grid-template-columns: 148px minmax(0, 1fr); min-height: 56px; border-bottom: 1px solid #e5e7e1; }
+    .roadmap-project-label { display: grid; align-content: center; gap: 3px; padding: 7px 12px 7px 0; }
+    .roadmap-project-label strong { overflow-wrap: anywhere; }
+    .roadmap-project-label span { color: #66736d; font-size: 10px; }
+    .roadmap-track { position: relative; margin: 8px 0; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(14.285% - 1px), #eef0eb calc(14.285% - 1px), #eef0eb 14.285%); }
+    .roadmap-bar { position: absolute; z-index: 2; min-width: 4px; height: 18px; margin-top: 8px; overflow: hidden; border-radius: 4px; color: #fff; font-size: 10px; line-height: 18px; white-space: nowrap; text-overflow: ellipsis; }
+    .roadmap-bar span { padding: 0 7px; }
+    .roadmap-bar.project-window { z-index: 1; height: 4px; margin-top: 0; border-radius: 0; background: #bdc8c0; }
+    .roadmap-bar.complete { background: #1b7f65; }
+    .roadmap-bar.active { background: #2f67a8; }
+    .roadmap-bar.late { background: #b54747; }
+    .roadmap-milestone { position: absolute; z-index: 3; top: 5px; width: 14px; height: 14px; margin-left: -7px; transform: rotate(45deg); border: 2px solid #17231f; background: #fffdf7; }
+    .roadmap-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; color: #66736d; font-size: 10px; }
+    .roadmap-legend span { display: inline-flex; align-items: center; gap: 5px; }
+    .legend-swatch { width: 12px; height: 8px; border-radius: 2px; }
+    .legend-swatch.complete { background: #1b7f65; }
+    .legend-swatch.active { background: #2f67a8; }
+    .legend-swatch.late { background: #b54747; }
+    .legend-milestone { width: 9px; height: 9px; transform: rotate(45deg); border: 1px solid #17231f; background: #fffdf7; }
+  `;
+}
+
 function projectsToPrintHtml(projects) {
   return `<!doctype html>
 <html lang="zh-CN">
@@ -752,6 +900,7 @@ document.addEventListener("click", (event) => {
     render();
   }
   if (action === "print-selected-projects") printProjects(selectedProjects());
+  if (action === "roadmap-selected-projects") exportRoadmap(selectedProjects());
   if (action === "export-selected-md") exportProjectsMarkdown(selectedProjects());
   if (action === "project-from-template") {
     const template = state.templates.find((item) => item.id === target.dataset.id);
