@@ -3,6 +3,7 @@ const todayISO = () => new Date().toISOString().slice(0, 10);
 const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 const defaultState = {
+  excelSchema: null,
   templates: [
     {
       id: uid(),
@@ -26,6 +27,8 @@ let dialogMode = null;
 let editingId = null;
 let lockedScrollY = 0;
 const selectedProjectIds = new Set();
+let projectSearch = "";
+let projectFilter = "all";
 
 const $ = (selector) => document.querySelector(selector);
 const summaryBand = $("#summaryBand");
@@ -43,6 +46,7 @@ function loadState() {
   try {
     const parsed = JSON.parse(saved);
     return {
+      excelSchema: parsed.excelSchema || null,
       templates: Array.isArray(parsed.templates) ? parsed.templates : [],
       projects: Array.isArray(parsed.projects) ? parsed.projects : []
     };
@@ -53,6 +57,19 @@ function loadState() {
 
 function cloneDefaultState() {
   return JSON.parse(JSON.stringify(defaultState));
+}
+
+function taskColumns() {
+  if (state.excelSchema?.taskColumns?.length) return state.excelSchema.taskColumns;
+  const template = state.templates[0];
+  return (template?.tasks || []).map((task) => ({ name: task.name, weight: Number(task.weight) || 0 }));
+}
+
+function setTaskColumns(columns) {
+  state.excelSchema = {
+    ...(state.excelSchema || {}),
+    taskColumns: columns.map((column) => ({ name: column.name, weight: Number(column.weight) || 0 }))
+  };
 }
 
 function saveState() {
@@ -148,8 +165,9 @@ function renderSummary() {
 }
 
 function renderProjects() {
+  const columns = taskColumns();
   if (!state.projects.length) {
-    projectList.innerHTML = `<div class="panel"><h3>还没有项目</h3><p class="muted">先从模板新建一个项目，后续就能按子任务勾选推进。</p></div>`;
+    projectList.innerHTML = `<div class="panel empty-state"><h3>还没有项目</h3><p class="muted">可以导入 Excel，也可以从模板新建项目。</p></div>`;
     return;
   }
 
@@ -158,39 +176,55 @@ function renderProjects() {
     if (!currentIds.has(id)) selectedProjectIds.delete(id);
   });
 
-  const bulkBar = `
-    <div class="panel project-bulk">
-      <div>
-        <strong>已选 ${selectedProjectIds.size} 个项目</strong>
-        <p class="muted">勾选项目后，可统一打印成一份报告。</p>
-      </div>
-      <div class="actions">
-        <button class="secondary-button" type="button" data-action="select-all-projects">全选</button>
-        <button class="secondary-button" type="button" data-action="clear-project-selection">清空</button>
-        <button class="primary-button" type="button" data-action="print-roadmap-selected-projects">打印项目路线图</button>
-      </div>
-    </div>
-  `;
+  const filtered = state.projects.filter((project) => {
+    const matchesSearch = !projectSearch || project.name.toLowerCase().includes(projectSearch.toLowerCase());
+    const matchesFilter = projectFilter === "all"
+      || (projectFilter === "active" && projectProgress(project) < 100)
+      || (projectFilter === "done" && projectProgress(project) === 100)
+      || (projectFilter === "late" && project.tasks.some((task) => !task.done && diffDays(todayISO(), task.dueDate) > 0));
+    return matchesSearch && matchesFilter;
+  });
 
-  const cards = state.projects.map((project) => {
+  const header = columns.map((column) => `<th class="matrix-task-head"><span>${escapeHtml(column.name)}</span><small>${Number(column.weight) || 0}%</small></th>`).join("");
+  const weightHeader = columns.map((column) => `<th>${Number(column.weight) || 0}%</th>`).join("");
+  const rows = filtered.map((project) => {
     const progress = projectProgress(project);
-    const selected = selectedProjectIds.has(project.id);
-
-    return `
-      <article class="card project-card">
-        <input class="project-card-select" type="checkbox" ${selected ? "checked" : ""} data-action="select-project" data-id="${project.id}" aria-label="选择 ${escapeHtml(project.name)}">
-        <button class="project-card-open" type="button" data-action="edit-project" data-id="${project.id}" aria-label="编辑 ${escapeHtml(project.name)}">
-          <span class="project-card-summary">
-            <strong>${escapeHtml(project.name)}</strong>
-            <span>${progress}%</span>
-          </span>
-          <span class="progress" aria-label="项目进度 ${progress}%"><span style="width:${progress}%"></span></span>
-        </button>
-      </article>
-    `;
+    const status = projectStatus(project);
+    const taskCells = columns.map((column, index) => {
+      const task = project.tasks[index] || { name: column.name, weight: column.weight, done: false, completedAt: "" };
+      const value = task.done ? (task.completedAt || "✓") : "";
+      return `<td class="matrix-task-cell ${task.done ? "is-done" : ""}"><input class="matrix-cell-input" type="text" inputmode="numeric" value="${escapeHtml(value)}" placeholder="—" data-matrix-project="${project.id}" data-matrix-task="${index}" aria-label="${escapeHtml(project.name)} ${escapeHtml(column.name)}"></td>`;
+    }).join("");
+    return `<tr data-project-row="${project.id}">
+      <td class="matrix-project-cell"><div class="matrix-project-name"><input class="matrix-select" type="checkbox" ${selectedProjectIds.has(project.id) ? "checked" : ""} data-action="select-project" data-id="${project.id}" aria-label="选择 ${escapeHtml(project.name)}"><input class="matrix-name-input" value="${escapeHtml(project.name)}" data-matrix-name="${project.id}" aria-label="项目名称"></div></td>
+      ${taskCells}
+      <td class="matrix-date-cell"><input type="date" value="${escapeHtml(project.dueDate || "")}" data-matrix-due="${project.id}" aria-label="预计报告交付日期"></td>
+      <td class="matrix-progress-cell"><strong>${progress}%</strong><small class="pill ${status.tone}">${escapeHtml(status.text)}</small></td>
+      <td class="matrix-action-cell"><button class="icon-button" type="button" data-action="edit-project" data-id="${project.id}" aria-label="编辑 ${escapeHtml(project.name)}" title="打开项目详情">↗</button></td>
+    </tr>`;
   }).join("");
 
-  projectList.innerHTML = bulkBar + cards;
+  projectList.innerHTML = `
+    <div class="matrix-toolbar">
+      <div class="matrix-toolbar-main"><strong>${selectedProjectIds.size} 个项目已选</strong><span class="muted">直接在任务格内填写完成日期或 ✓</span></div>
+      <div class="matrix-toolbar-actions">
+        <label class="matrix-search"><span class="sr-only">搜索项目</span><input id="projectSearchInput" type="search" value="${escapeHtml(projectSearch)}" placeholder="搜索项目"></label>
+        <select id="projectFilterSelect" aria-label="筛选项目">
+          <option value="all" ${projectFilter === "all" ? "selected" : ""}>全部项目</option>
+          <option value="active" ${projectFilter === "active" ? "selected" : ""}>进行中</option>
+          <option value="late" ${projectFilter === "late" ? "selected" : ""}>有延误</option>
+          <option value="done" ${projectFilter === "done" ? "selected" : ""}>已完成</option>
+        </select>
+        <button class="secondary-button" type="button" data-action="select-all-projects">全选</button>
+        <button class="secondary-button" type="button" data-action="clear-project-selection">清空</button>
+      </div>
+    </div>
+    <div class="matrix-scroll">
+      <table class="project-matrix">
+        <thead><tr><th class="matrix-project-head" rowspan="2">项目名称</th>${header}<th rowspan="2" class="matrix-delivery-head">预计交付</th><th rowspan="2" class="matrix-progress-head">项目进度</th><th rowspan="2" class="matrix-action-head"></th></tr><tr class="matrix-weight-row">${weightHeader}</tr></thead>
+        <tbody>${rows || `<tr><td class="matrix-empty" colspan="${columns.length + 4}">没有符合条件的项目</td></tr>`}</tbody>
+      </table>
+    </div>`;
 }
 
 function renderTemplates() {
@@ -541,6 +575,96 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
+function normalizeExcelDate(value) {
+  const text = String(value ?? "").trim();
+  if (!text) return "";
+  const match = text.match(/(\d{4})[\/-年](\d{1,2})[\/-月](\d{1,2})/);
+  if (!match) return "";
+  return `${match[1]}-${String(match[2]).padStart(2, "0")}-${String(match[3]).padStart(2, "0")}`;
+}
+
+function importExcel(file) {
+  if (!window.XLSX) return alert("Excel 解析组件尚未加载，请刷新页面后重试。");
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const workbook = XLSX.read(reader.result, { type: "array", cellDates: false, raw: false });
+      const sheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "", raw: false });
+      const headerIndex = rows.findIndex((row) => row.some((cell) => String(cell).includes("项目名称")));
+      if (headerIndex < 0) throw new Error("找不到项目名称表头");
+      const headers = rows[headerIndex].map((cell) => String(cell || "").trim());
+      const weights = rows[headerIndex + 1] || [];
+      const expectedIndex = headers.findIndex((header) => /预计.*(交付|完成)/.test(header));
+      const summaryIndex = headers.findIndex((header) => /项目(进度|状态|汇总)/.test(header));
+      const taskBoundary = expectedIndex > 1 ? expectedIndex : summaryIndex > 1 ? summaryIndex : headers.length;
+      const columns = headers.slice(1, taskBoundary).filter(Boolean).map((name, index) => ({ name, weight: Number(weights[index + 1]) || 0 }));
+      if (!columns.length) throw new Error("找不到任务列");
+      if (!columns.some((column) => column.weight > 0)) {
+        const base = Math.floor(100 / columns.length);
+        let remainder = 100 - base * columns.length;
+        columns.forEach((column) => {
+          column.weight = base + (remainder > 0 ? 1 : 0);
+          remainder -= 1;
+        });
+      }
+
+      const projects = [];
+      rows.slice(headerIndex + 2).forEach((row) => {
+        const name = String(row[0] || "").trim();
+        if (!name) return;
+        const dueDate = normalizeExcelDate(row[expectedIndex]);
+        const tasks = columns.map((column, index) => {
+          const rawValue = String(row[index + 1] || "").trim();
+          const completedAt = normalizeExcelDate(rawValue);
+          const done = Boolean(rawValue) && !/^(待完成|未完成|未开始|进行中|计划)$/i.test(rawValue);
+          return { id: uid(), name: column.name, weight: column.weight, dueDate: dueDate || todayISO(), completedAt, done, note: "" };
+        });
+        const completedDates = tasks.map((task) => task.completedAt).filter(Boolean).sort();
+        projects.push({ id: uid(), name, templateName: file.name, startDate: completedDates[0] || todayISO(), dueDate: dueDate || addDays(todayISO(), 30), tasks });
+      });
+      if (!projects.length) throw new Error("没有读到项目行");
+      state.excelSchema = { fileName: file.name, taskColumns: columns, importedAt: todayISO() };
+      state.projects = projects;
+      state.templates = [{ id: uid(), name: file.name.replace(/\.(xlsx|xlsm?|xls)$/i, ""), note: "由 Excel 表格导入", tasks: columns.map((column) => ({ id: uid(), name: column.name, weight: column.weight, days: 1 })) }];
+      selectedProjectIds.clear();
+      render();
+      alert(`已导入 ${projects.length} 个项目和 ${columns.length} 个任务节点。`);
+    } catch (error) {
+      alert(`Excel 导入失败：${error.message || "请确认表格结构"}`);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+function exportExcel() {
+  if (!window.XLSX) return alert("Excel 导出组件尚未加载，请刷新页面后重试。");
+  const columns = taskColumns();
+  const expectedHeader = state.excelSchema?.expectedHeader || "预计报告交付";
+  const headers = ["项目名称", ...columns.map((column) => column.name), expectedHeader, "项目进度", "项目状态", "项目汇总"];
+  const rows = [
+    ["项目进度跟踪表"],
+    ["更新时间：", todayISO()],
+    headers,
+    ["", ...columns.map((column) => Number(column.weight) || 0), "", "", "", ""]
+  ];
+  state.projects.forEach((project) => {
+    const values = columns.map((column, index) => {
+      const task = project.tasks[index];
+      return task?.done ? (task.completedAt || "✓") : "";
+    });
+    const progress = projectProgress(project);
+    rows.push([project.name, ...values, project.dueDate || "", `${progress}%`, projectStatus(project).text, `${progress}%\n${projectStatus(project).text}`]);
+  });
+  const sheet = XLSX.utils.aoa_to_sheet(rows);
+  sheet["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: headers.length - 1 } }];
+  sheet["!cols"] = [{ wch: 30 }, ...columns.map(() => ({ wch: 12 })), { wch: 16 }, { wch: 12 }, { wch: 18 }, { wch: 20 }];
+  sheet["!freeze"] = { xSplit: 1, ySplit: 4 };
+  const out = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(out, sheet, "项目跟踪表");
+  XLSX.writeFile(out, `项目进度跟踪表-${todayISO()}.xlsx`);
+}
+
 function printRoadmap(projects) {
   if (!projects.length) return alert("请先选择要打印的项目");
   const reportHtml = projectsToRoadmapHtml(projects);
@@ -586,6 +710,8 @@ function projectsToGanttHtml(projects) {
 }
 
 function roadmapReportBody(projects) {
+  const columns = taskColumns();
+  const columnHeader = columns.map((column) => `<div class="roadmap-column-head" style="width:${Number(column.weight) || 0}%"><strong>${escapeHtml(column.name)}</strong><small>${Number(column.weight) || 0}%</small></div>`).join("");
   return `
     <article class="roadmap-report">
       <header class="roadmap-report-head">
@@ -595,6 +721,7 @@ function roadmapReportBody(projects) {
         </div>
         <p>${projects.length} 个项目</p>
       </header>
+      <div class="roadmap-column-header">${columnHeader}</div>
       <div class="roadmap-grid">
         ${projects.map((project) => roadmapProjectRow(project)).join("")}
       </div>
@@ -735,6 +862,12 @@ function roadmapDocumentCss() {
     .roadmap-kicker { margin: 0 0 3px; color: #1b7f65; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; }
     h1 { margin: 0; font-size: 21px; }
     .roadmap-report-head > p { margin: 0; color: #66736d; }
+    .roadmap-column-header { display: flex; min-width: 0; margin: 7px 0 2px; border: 1px solid #c9d0c9; background: #f1f5f1; }
+    .roadmap-column-head { min-width: 3px; box-sizing: border-box; padding: 4px 3px; border-right: 1px solid #c9d0c9; text-align: center; }
+    .roadmap-column-head:last-child { border-right: 0; }
+    .roadmap-column-head strong, .roadmap-column-head small { display: block; overflow-wrap: anywhere; }
+    .roadmap-column-head strong { color: #435149; font-size: 8px; line-height: 1.1; }
+    .roadmap-column-head small { margin-top: 2px; color: #66736d; font-size: 7px; }
     .roadmap-project { padding: 6px 0 7px; border-bottom: 1px solid #dfe4df; break-inside: avoid; page-break-inside: avoid; }
     .roadmap-project-label { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding-bottom: 4px; }
     .roadmap-project-label strong { min-width: 0; overflow-wrap: anywhere; font-size: 11px; }
@@ -908,7 +1041,8 @@ document.addEventListener("click", (event) => {
   if (target.matches(".tab")) switchView(target.dataset.view);
   if (target.id === "newTemplateBtn") openTemplateEditor();
   if (target.id === "newProjectBtn") openProjectPicker();
-  if (target.id === "downloadBtn" || target.id === "exportBtn") exportData();
+  if (target.id === "downloadBtn") exportData();
+  if (target.id === "exportXlsxBtn" || target.id === "exportXlsxDataBtn") exportExcel();
   if (target.id === "addTaskRowBtn") {
     const shouldRebalance = canRebalanceTemplateWeights();
     addTaskRow({ name: "", weight: shouldRebalance ? 0 : "", days: 1 }, shouldRebalance);
@@ -969,6 +1103,43 @@ document.addEventListener("input", (event) => {
 });
 
 document.addEventListener("change", (event) => {
+  if (event.target.matches("#projectFilterSelect")) {
+    projectFilter = event.target.value;
+    renderProjects();
+    return;
+  }
+  if (event.target.matches("#projectSearchInput")) {
+    projectSearch = event.target.value.trim();
+    renderProjects();
+    return;
+  }
+  if (event.target.matches("[data-matrix-name]")) {
+    const project = state.projects.find((item) => item.id === event.target.dataset.matrixName);
+    if (project) project.name = event.target.value.trim() || project.name;
+    render();
+    return;
+  }
+  if (event.target.matches("[data-matrix-due]")) {
+    const project = state.projects.find((item) => item.id === event.target.dataset.matrixDue);
+    if (project) {
+      project.dueDate = event.target.value;
+      project.tasks.forEach((task) => { if (!task.done) task.dueDate = event.target.value || task.dueDate; });
+    }
+    render();
+    return;
+  }
+  if (event.target.matches("[data-matrix-project][data-matrix-task]")) {
+    const project = state.projects.find((item) => item.id === event.target.dataset.matrixProject);
+    const task = project?.tasks[Number(event.target.dataset.matrixTask)];
+    if (project && task) {
+      const value = event.target.value.trim();
+      task.done = Boolean(value);
+      task.completedAt = normalizeExcelDate(value) || (value === "✓" ? (task.completedAt || todayISO()) : "");
+      saveState();
+      renderProjects();
+    }
+    return;
+  }
   if (!event.target.matches('.project-task-row [data-field="done"]')) return;
   const row = event.target.closest(".project-task-row");
   const completedAt = row.querySelector('[data-field="completedAt"]');
@@ -989,6 +1160,12 @@ dialog.addEventListener("close", unlockPageScroll);
 $("#importFile").addEventListener("change", (event) => {
   const file = event.target.files?.[0];
   if (file) importData(file);
+  event.target.value = "";
+});
+
+$("#xlsxImportFile").addEventListener("change", (event) => {
+  const file = event.target.files?.[0];
+  if (file) importExcel(file);
   event.target.value = "";
 });
 

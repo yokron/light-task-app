@@ -1,9 +1,10 @@
-const CACHE_NAME = "light-task-app-v24";
+const CACHE_NAME = "light-task-app-v25";
 const ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./xlsx.full.min.js",
   "./manifest.json",
   "./icon.svg"
 ];

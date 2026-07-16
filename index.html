@@ -17,9 +17,13 @@
           <p class="eyebrow">离线项目清单</p>
           <h1>轻任务模板</h1>
         </div>
-        <button class="icon-button" id="exportBtn" type="button" title="导出数据" aria-label="导出数据">
-          <span aria-hidden="true">⇩</span>
-        </button>
+        <div class="topbar-actions">
+          <label class="secondary-button file-button compact-file-button" title="导入 Excel">
+            <span aria-hidden="true">↑</span> 导入 Excel
+            <input id="xlsxImportFile" type="file" accept=".xlsx,.xls,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel">
+          </label>
+          <button class="primary-button" id="exportXlsxBtn" type="button">导出 Excel</button>
+        </div>
       </header>
 
       <main>
@@ -34,7 +38,10 @@
         <section class="view is-active" id="projectsView">
           <div class="section-head">
             <h2>项目</h2>
-            <button class="primary-button" id="newProjectBtn" type="button">新建项目</button>
+            <div class="section-actions">
+              <button class="secondary-button" id="newProjectBtn" type="button">新建项目</button>
+              <button class="primary-button" type="button" data-action="print-roadmap-selected-projects">打印路线图</button>
+            </div>
           </div>
           <div class="stack" id="projectList"></div>
         </section>
@@ -57,6 +64,7 @@
                 导入 JSON
                 <input id="importFile" type="file" accept="application/json">
               </label>
+              <button class="secondary-button" id="exportXlsxDataBtn" type="button">导出 Excel 表格</button>
             </div>
           </div>
         </section>
@@ -97,6 +105,7 @@
       </div>
     </template>
 
+    <script src="./xlsx.full.min.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>
