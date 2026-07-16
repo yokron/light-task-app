@@ -590,31 +590,35 @@ function roadmapReportBody(projects) {
       </div>
       <footer class="roadmap-legend">
         <span><i class="legend-swatch complete"></i>已完成</span>
-        <span><i class="legend-swatch active"></i>进行中</span>
-        <span><i class="legend-swatch late"></i>已延期</span>
-        <span><i class="legend-milestone"></i>项目里程碑</span>
+        <span><i class="legend-swatch open"></i>未完成</span>
+        <span><i class="legend-node"></i>任务节点</span>
       </footer>
     </article>
   `;
 }
 
 function roadmapProjectRow(project, start, totalDays) {
-  const projectStart = project.startDate || start;
-  const projectEnd = project.dueDate || projectStart;
   const status = projectStatus(project);
   const progress = projectProgress(project);
-  const milestoneLeft = Math.max(0, Math.min(100, (diffDays(projectEnd, start) / totalDays) * 100));
-  const tone = progress === 100 ? "complete" : status.tone === "bad" ? "late" : "active";
+  const segments = project.tasks.map((task) => {
+    const width = Math.max(0, Number(task.weight) || 0);
+    const tone = task.done ? "complete" : "open";
+    return `<div class="roadmap-segment ${tone}" style="width:${width}%"></div>`;
+  }).join("");
+  const labels = project.tasks.map((task, index) => {
+    const width = Math.max(0, Number(task.weight) || 0);
+    const completion = task.done ? (task.completedAt || "已完成") : "待完成";
+    return `<div class="roadmap-segment-label" style="width:${width}%"><span class="roadmap-node">${index + 1}</span><strong title="${escapeHtml(task.name)}">${escapeHtml(task.name)}</strong><small>${escapeHtml(completion)}</small></div>`;
+  }).join("");
 
   return `<section class="roadmap-project">
     <div class="roadmap-project-label">
       <strong>${escapeHtml(project.name)}</strong>
       <span>${progress}% · ${project.tasks.length} 项任务 · ${escapeHtml(status.text)}</span>
     </div>
-    <div class="roadmap-track">
-      <div class="roadmap-bar project-window" style="left:${Math.max(0, (diffDays(projectStart, start) / totalDays) * 100)}%;width:${Math.max(1.4, ((diffDays(projectEnd, projectStart) + 1) / totalDays) * 100)}%"></div>
-      <div class="roadmap-bar ${tone}" style="left:${Math.max(0, (diffDays(projectStart, start) / totalDays) * 100)}%;width:${Math.max(1.4, ((diffDays(projectEnd, projectStart) + 1) / totalDays) * 100)}%"><span>${progress}%</span></div>
-      <span class="roadmap-milestone" style="left:${milestoneLeft}%" title="项目截止：${escapeHtml(projectEnd)}"></span>
+    <div class="roadmap-segment-area">
+      <div class="roadmap-segments">${segments}</div>
+      <div class="roadmap-segment-labels">${labels}</div>
     </div>
   </section>`;
 }
@@ -721,15 +725,28 @@ function roadmapDocumentCss() {
     .roadmap-kicker { margin: 0 0 3px; color: #1b7f65; font-size: 9px; font-weight: 800; letter-spacing: 1.5px; }
     h1 { margin: 0; font-size: 25px; }
     .roadmap-report-head > p { margin: 0; color: #66736d; }
-    .roadmap-scale { margin-left: 148px; height: 34px; border-bottom: 1px solid #c9d0c9; }
+    .roadmap-scale { margin-left: 220px; height: 34px; border-bottom: 1px solid #c9d0c9; }
     .roadmap-scale-inner { position: relative; height: 100%; }
     .roadmap-tick { position: absolute; bottom: 0; height: 100%; border-left: 1px solid #d9ded8; color: #66736d; }
     .roadmap-tick b { position: absolute; top: 5px; left: 5px; white-space: nowrap; font-size: 10px; font-weight: 600; }
-    .roadmap-project { display: grid; grid-template-columns: 148px minmax(0, 1fr); min-height: 56px; border-bottom: 1px solid #e5e7e1; }
-    .roadmap-project-label { display: grid; align-content: center; gap: 3px; padding: 7px 12px 7px 0; }
+    .roadmap-project { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 82px; border-bottom: 1px solid #e5e7e1; }
+    .roadmap-project-label { display: grid; align-content: center; gap: 3px; padding: 7px 14px 7px 0; }
     .roadmap-project-label strong { overflow-wrap: anywhere; }
     .roadmap-project-label span { color: #66736d; font-size: 10px; }
-    .roadmap-track { position: relative; margin: 8px 0; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(14.285% - 1px), #eef0eb calc(14.285% - 1px), #eef0eb 14.285%); }
+    .roadmap-segment-area { min-width: 0; padding: 14px 0 8px; }
+    .roadmap-segments, .roadmap-segment-labels { display: flex; min-width: 0; }
+    .roadmap-segments { height: 22px; border: 1px solid #86958c; background: #f7faf7; }
+    .roadmap-segment { position: relative; min-width: 3px; border-right: 1px solid #86958c; background: #fffdf7; }
+    .roadmap-segment:last-child { border-right: 0; }
+    .roadmap-segment.complete { background: #1b7f65; }
+    .roadmap-segment.open { background: #fffdf7; }
+    .roadmap-segment-label { position: relative; min-width: 0; padding: 9px 5px 0; text-align: center; border-left: 1px solid #c9d0c9; }
+    .roadmap-segment-label:first-child { border-left: 0; }
+    .roadmap-segment-label strong, .roadmap-segment-label small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .roadmap-segment-label strong { color: #435149; font-size: 9px; font-weight: 700; }
+    .roadmap-segment-label small { margin-top: 2px; color: #66736d; font-size: 8px; }
+    .roadmap-node { position: absolute; top: -9px; left: 0; width: 16px; height: 16px; transform: translateX(-50%); border: 1px solid #435149; border-radius: 50%; background: #fffdf7; color: #435149; font-size: 9px; line-height: 14px; text-align: center; }
+    .roadmap-segment-label:last-child .roadmap-node { left: 100%; }
     .roadmap-bar { position: absolute; z-index: 2; min-width: 4px; height: 18px; margin-top: 8px; overflow: hidden; border-radius: 4px; color: #fff; font-size: 10px; line-height: 18px; white-space: nowrap; text-overflow: ellipsis; }
     .roadmap-bar span { padding: 0 7px; }
     .roadmap-bar.project-window { z-index: 1; height: 4px; margin-top: 0; border-radius: 0; background: #bdc8c0; }
@@ -743,6 +760,8 @@ function roadmapDocumentCss() {
     .legend-swatch.complete { background: #1b7f65; }
     .legend-swatch.active { background: #2f67a8; }
     .legend-swatch.late { background: #b54747; }
+    .legend-swatch.open { border: 1px solid #86958c; background: #fffdf7; }
+    .legend-node { width: 11px; height: 11px; border: 1px solid #435149; border-radius: 50%; background: #fffdf7; }
     .legend-milestone { width: 9px; height: 9px; transform: rotate(45deg); border: 1px solid #17231f; background: #fffdf7; }
   `;
 }

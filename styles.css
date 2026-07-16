@@ -863,7 +863,7 @@ input[type="date"]::-webkit-date-and-time-value {
   .roadmap-project {
     display: grid;
     grid-template-columns: 220px minmax(0, 1fr);
-    min-height: 56px;
+    min-height: 82px;
     border-bottom: 1px solid #e5e7e1;
   }
 
@@ -886,6 +886,23 @@ input[type="date"]::-webkit-date-and-time-value {
     margin: 8px 0;
     background: repeating-linear-gradient(90deg, transparent 0, transparent calc(14.285% - 1px), #eef0eb calc(14.285% - 1px), #eef0eb 14.285%);
   }
+
+  .roadmap-segment-area { min-width: 0; padding: 14px 0 8px; }
+  .roadmap-segments,
+  .roadmap-segment-labels { display: flex; min-width: 0; }
+  .roadmap-segments { height: 22px; border: 1px solid #86958c; background: #f7faf7; }
+  .roadmap-segment { position: relative; min-width: 3px; border-right: 1px solid #86958c; background: #fffdf7; }
+  .roadmap-segment:last-child { border-right: 0; }
+  .roadmap-segment.complete { background: #1b7f65; }
+  .roadmap-segment.open { background: #fffdf7; }
+  .roadmap-segment-label { position: relative; min-width: 0; padding: 9px 5px 0; text-align: center; border-left: 1px solid #c9d0c9; }
+  .roadmap-segment-label:first-child { border-left: 0; }
+  .roadmap-segment-label strong,
+  .roadmap-segment-label small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .roadmap-segment-label strong { color: #435149; font-size: 9px; font-weight: 700; }
+  .roadmap-segment-label small { margin-top: 2px; color: #66736d; font-size: 8px; }
+  .roadmap-node { position: absolute; top: -9px; left: 0; width: 16px; height: 16px; transform: translateX(-50%); border: 1px solid #435149; border-radius: 50%; background: #fffdf7; color: #435149; font-size: 9px; line-height: 14px; text-align: center; }
+  .roadmap-segment-label:last-child .roadmap-node { left: 100%; }
 
   .roadmap-bar,
   .gantt-bar {
@@ -923,6 +940,8 @@ input[type="date"]::-webkit-date-and-time-value {
   .gantt-bar.active { background: #2f67a8; }
   .roadmap-bar.late,
   .gantt-bar.late { background: #b54747; }
+  .legend-swatch.open { border: 1px solid #86958c; background: #fffdf7; }
+  .legend-node { width: 11px; height: 11px; border: 1px solid #435149; border-radius: 50%; background: #fffdf7; }
 
   .roadmap-milestone {
     position: absolute;
