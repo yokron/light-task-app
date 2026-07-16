@@ -739,8 +739,9 @@ function roadmapDocumentCss() {
     .roadmap-segment:last-child { border-right: 0; }
     .roadmap-segment.complete { border: 2px solid #1b7f65; background: #1b7f65; }
     .roadmap-segment.open { background: #fffdf7; }
-    .roadmap-segment-label { position: relative; min-width: 0; padding: 9px 5px 0; text-align: center; border-left: 1px solid #c9d0c9; }
+    .roadmap-segment-label { position: relative; min-width: 58px; flex: 0 0 auto; padding: 9px 5px 0; text-align: center; border-left: 1px solid #c9d0c9; }
     .roadmap-segment-label:first-child { border-left: 0; }
+    .roadmap-segment-label:last-child { transform: translateX(-100%); }
     .roadmap-segment-label strong, .roadmap-segment-label small { display: block; overflow-wrap: anywhere; white-space: normal; }
     .roadmap-segment-label strong { color: #435149; font-size: 9px; font-weight: 700; line-height: 1.15; }
     .roadmap-segment-label small { margin-top: 3px; color: #66736d; font-size: 8px; line-height: 1.1; }
