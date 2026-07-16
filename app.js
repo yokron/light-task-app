@@ -167,9 +167,8 @@ function renderProjects() {
       <div class="actions">
         <button class="secondary-button" type="button" data-action="select-all-projects">全选</button>
         <button class="secondary-button" type="button" data-action="clear-project-selection">清空</button>
-        <button class="primary-button" type="button" data-action="print-selected-projects">打印选中</button>
-        <button class="primary-button" type="button" data-action="roadmap-selected-projects">导出项目路线图</button>
-        <button class="secondary-button" type="button" data-action="export-selected-md">导出选中 Markdown</button>
+        <button class="primary-button" type="button" data-action="print-roadmap-selected-projects">打印项目路线图</button>
+        <button class="secondary-button" type="button" data-action="print-gantt-selected-projects">打印详细甘特图</button>
       </div>
     </div>
   `;
@@ -517,51 +516,9 @@ function exportData() {
   URL.revokeObjectURL(url);
 }
 
-function exportProjectMarkdown(project) {
-  const markdown = projectToMarkdown(project);
-  downloadTextFile(`${safeFileName(project.name)}-${todayISO()}.md`, markdown, "text/markdown;charset=utf-8");
-}
-
-function exportProjectsMarkdown(projects) {
-  if (!projects.length) return alert("请先选择要导出的项目。");
-  const markdown = projects.map(projectToMarkdown).join("\n\n---\n\n");
-  downloadTextFile(`selected-projects-${todayISO()}.md`, markdown, "text/markdown;charset=utf-8");
-}
-
-
-function projectToMarkdown(project) {
-  const status = projectStatus(project);
-  const progress = projectProgress(project);
-  const tasks = project.tasks.map((task, index) => {
-    const status = taskStatus(task);
-    const done = task.done ? "x" : " ";
-    const completedAt = task.completedAt || "-";
-    const note = task.note ? `\n  - 备注：${escapeMarkdown(task.note)}` : "";
-    return `${index + 1}. [${done}] ${escapeMarkdown(task.name)}（${task.weight}%）\n  - 计划：${task.dueDate || "-"}；完成：${completedAt}；状态：${escapeMarkdown(status.text)}${note}`;
-  }).join("\n");
-
-  return [
-    `# ${escapeMarkdown(project.name)}`,
-    "",
-    `> ${escapeMarkdown(status.text)} · ${progress}% · ${project.startDate || "-"} 至 ${project.dueDate || "-"} · ${escapeMarkdown(project.templateName || "自定义项目")}`,
-    "",
-    `导出日期：${todayISO()}`,
-    "",
-    "## 子任务",
-    "",
-    tasks || "- 暂无子任务",
-    "",
-    "数据来自轻任务模板 App。"
-  ].join("\n");
-}
-
-function printProject(project) {
-  printProjects([project]);
-}
-
-function printProjects(projects) {
+function printReport(projects, type) {
   if (!projects.length) return alert("请先选择要打印的项目");
-  const reportHtml = projectsToPrintHtml(projects);
+  const reportHtml = type === "gantt" ? projectsToGanttHtml(projects) : projectsToRoadmapHtml(projects);
   const printWindow = window.open("", "_blank");
 
   if (printWindow) {
@@ -573,24 +530,7 @@ function printProjects(projects) {
     return;
   }
 
-  printRoot.innerHTML = printReportBody(projects);
-  window.setTimeout(() => window.print(), 50);
-}
-
-function exportRoadmap(projects) {
-  if (!projects.length) return alert("请先选择要导出的项目。");
-  const roadmapWindow = window.open("", "_blank");
-  const reportHtml = projectsToRoadmapHtml(projects);
-
-  if (roadmapWindow) {
-    roadmapWindow.document.open();
-    roadmapWindow.document.write(reportHtml);
-    roadmapWindow.document.close();
-    roadmapWindow.focus();
-    return;
-  }
-
-  printRoot.innerHTML = roadmapReportBody(projects);
+  printRoot.innerHTML = type === "gantt" ? ganttReportBody(projects) : roadmapReportBody(projects);
   window.setTimeout(() => window.print(), 50);
 }
 
@@ -604,6 +544,19 @@ function projectsToRoadmapHtml(projects) {
     <style>${roadmapDocumentCss()}</style>
   </head>
   <body>${roadmapReportBody(projects)}</body>
+</html>`;
+}
+
+function projectsToGanttHtml(projects) {
+  return `<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>详细甘特图-${todayISO()}</title>
+    <style>${ganttDocumentCss()}</style>
+  </head>
+  <body>${ganttReportBody(projects)}</body>
 </html>`;
 }
 
@@ -650,29 +603,99 @@ function roadmapProjectRow(project, start, totalDays) {
   const projectEnd = project.dueDate || projectStart;
   const status = projectStatus(project);
   const progress = projectProgress(project);
-  const taskBars = project.tasks.map((task) => {
-    const taskEnd = task.dueDate || projectEnd;
-    const taskStart = task.done && task.completedAt ? task.completedAt : projectStart;
-    const left = Math.max(0, (diffDays(taskStart, start) / totalDays) * 100);
-    const width = Math.max(1.4, ((diffDays(taskEnd, taskStart) + 1) / totalDays) * 100);
-    const tone = task.done ? "complete" : (diffDays(todayISO(), taskEnd) > 0 ? "late" : "active");
-    return `<div class="roadmap-bar ${tone}" style="left:${left}%;width:${Math.min(width, 100 - left)}%" title="${escapeHtml(task.name)}">
-      <span>${escapeHtml(task.name)}</span>
-    </div>`;
-  }).join("");
   const milestoneLeft = Math.max(0, Math.min(100, (diffDays(projectEnd, start) / totalDays) * 100));
+  const tone = progress === 100 ? "complete" : status.tone === "bad" ? "late" : "active";
 
   return `<section class="roadmap-project">
     <div class="roadmap-project-label">
       <strong>${escapeHtml(project.name)}</strong>
-      <span>${progress}% · ${escapeHtml(status.text)}</span>
+      <span>${progress}% · ${project.tasks.length} 项任务 · ${escapeHtml(status.text)}</span>
     </div>
     <div class="roadmap-track">
       <div class="roadmap-bar project-window" style="left:${Math.max(0, (diffDays(projectStart, start) / totalDays) * 100)}%;width:${Math.max(1.4, ((diffDays(projectEnd, projectStart) + 1) / totalDays) * 100)}%"></div>
-      ${taskBars}
+      <div class="roadmap-bar ${tone}" style="left:${Math.max(0, (diffDays(projectStart, start) / totalDays) * 100)}%;width:${Math.max(1.4, ((diffDays(projectEnd, projectStart) + 1) / totalDays) * 100)}%"><span>${progress}%</span></div>
       <span class="roadmap-milestone" style="left:${milestoneLeft}%" title="项目截止：${escapeHtml(projectEnd)}"></span>
     </div>
   </section>`;
+}
+
+function ganttReportBody(projects) {
+  const dates = projects.flatMap((project) => [project.startDate, project.dueDate, ...project.tasks.map((task) => task.dueDate), ...project.tasks.map((task) => task.completedAt)])
+    .filter(Boolean)
+    .sort();
+  if (!dates.length) return `<p>没有可用于甘特图的日期。</p>`;
+
+  const start = dates[0];
+  const end = dates[dates.length - 1];
+  const totalDays = Math.max(diffDays(end, start) + 1, 1);
+  const tickHtml = buildRoadmapTicks(start, end).map((tick) => {
+    const left = (diffDays(tick.date, start) / totalDays) * 100;
+    return `<span class="gantt-tick" style="left:${left}%"><b>${escapeHtml(tick.label)}</b></span>`;
+  }).join("");
+
+  return `<article class="gantt-report">
+    <header class="gantt-report-head">
+      <div><p class="roadmap-kicker">DETAILED GANTT</p><h1>详细甘特图</h1></div>
+      <p>${projects.length} 个项目 · ${formatDate(start)} - ${formatDate(end)} · 生成于 ${todayISO()}</p>
+    </header>
+    <div class="gantt-scale"><div class="gantt-scale-inner">${tickHtml}</div></div>
+    <div class="gantt-grid">${projects.map((project) => ganttProjectRows(project, start, totalDays)).join("")}</div>
+    <footer class="gantt-legend">
+      <span><i class="legend-swatch complete"></i>已完成</span>
+      <span><i class="legend-swatch active"></i>进行中</span>
+      <span><i class="legend-swatch late"></i>已延期</span>
+    </footer>
+  </article>`;
+}
+
+function ganttProjectRows(project, start, totalDays) {
+  const projectStart = project.startDate || start;
+  const projectEnd = project.dueDate || projectStart;
+  const progress = projectProgress(project);
+  const projectLeft = Math.max(0, diffDays(projectStart, start) / totalDays * 100);
+  const projectWidth = Math.max(1.4, (diffDays(projectEnd, projectStart) + 1) / totalDays * 100);
+  const projectHeader = `<div class="gantt-project-row"><div class="gantt-label project-label"><strong>${escapeHtml(project.name)}</strong><span>${progress}% · ${project.tasks.length} 项任务</span></div><div class="gantt-track project-track"><div class="gantt-project-window" style="left:${projectLeft}%;width:${Math.min(projectWidth, 100 - projectLeft)}%"></div></div></div>`;
+  const taskRows = project.tasks.map((task) => {
+    const taskEnd = task.dueDate || projectEnd;
+    const taskStart = task.done && task.completedAt ? task.completedAt : projectStart;
+    const left = Math.max(0, diffDays(taskStart, start) / totalDays * 100);
+    const width = Math.max(1.4, (diffDays(taskEnd, taskStart) + 1) / totalDays * 100);
+    const tone = task.done ? "complete" : diffDays(todayISO(), taskEnd) > 0 ? "late" : "active";
+    return `<div class="gantt-task-row"><div class="gantt-label task-label"><span>${escapeHtml(task.name)}</span><small>${task.weight}% · ${escapeHtml(task.dueDate || "未设置日期")}</small></div><div class="gantt-track"><div class="gantt-bar ${tone}" style="left:${left}%;width:${Math.min(width, 100 - left)}%"><span>${task.done ? "已完成" : escapeHtml(task.name)}</span></div></div></div>`;
+  }).join("");
+  return projectHeader + taskRows;
+}
+
+function ganttDocumentCss() {
+  return `
+    @page { size: A4 landscape; margin: 12mm; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #17231f; font: 11px/1.35 -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif; }
+    .gantt-report { width: 100%; }
+    .gantt-report-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; padding-bottom: 12px; border-bottom: 2px solid #17231f; }
+    .gantt-report-head h1 { margin: 0; font-size: 25px; }
+    .gantt-report-head > p { margin: 0; color: #66736d; }
+    .gantt-scale { margin-left: 220px; height: 34px; border-bottom: 1px solid #c9d0c9; }
+    .gantt-scale-inner, .gantt-track { position: relative; height: 100%; }
+    .gantt-tick { position: absolute; bottom: 0; height: 100%; border-left: 1px solid #d9ded8; color: #66736d; }
+    .gantt-tick b { position: absolute; top: 5px; left: 5px; white-space: nowrap; font-size: 10px; font-weight: 600; }
+    .gantt-project-row, .gantt-task-row { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 32px; border-bottom: 1px solid #e5e7e1; }
+    .gantt-project-row { min-height: 44px; background: #f1f5f1; border-top: 1px solid #c9d0c9; }
+    .gantt-label { display: flex; flex-direction: column; justify-content: center; min-width: 0; padding: 5px 14px 5px 0; overflow-wrap: anywhere; }
+    .gantt-label span, .gantt-label strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .gantt-label small { color: #66736d; font-size: 9px; }
+    .task-label { padding-left: 16px; color: #435149; }
+    .gantt-track { margin: 4px 0; background: repeating-linear-gradient(90deg, transparent 0, transparent calc(14.285% - 1px), #eef0eb calc(14.285% - 1px), #eef0eb 14.285%); }
+    .project-track { margin: 7px 0; }
+    .gantt-project-window { position: absolute; top: 50%; height: 7px; transform: translateY(-50%); border-radius: 4px; background: #aabbb1; }
+    .gantt-bar { position: absolute; top: 50%; min-width: 4px; height: 18px; transform: translateY(-50%); overflow: hidden; border-radius: 4px; color: #fff; line-height: 18px; white-space: nowrap; text-overflow: ellipsis; }
+    .gantt-bar span { padding: 0 7px; }
+    .gantt-bar.complete { background: #1b7f65; }
+    .gantt-bar.active { background: #2f67a8; }
+    .gantt-bar.late { background: #b54747; }
+    .gantt-legend { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; color: #66736d; font-size: 10px; }
+    .gantt-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  `;
 }
 
 function buildRoadmapTicks(start, end) {
@@ -830,18 +853,6 @@ function downloadTextFile(fileName, content, type) {
   URL.revokeObjectURL(url);
 }
 
-function escapeMarkdown(value) {
-  return String(value ?? "").replace(/([\\`*_{}\[\]()#+\-.!|>])/g, "\\$1");
-}
-
-function safeFileName(value) {
-  return String(value || "project")
-    .trim()
-    .replace(/[\\/:*?"<>|]+/g, "-")
-    .replace(/\s+/g, "-")
-    .slice(0, 60) || "project";
-}
-
 function importData(file) {
   const reader = new FileReader();
   reader.onload = () => {
@@ -899,9 +910,8 @@ document.addEventListener("click", (event) => {
     selectedProjectIds.clear();
     render();
   }
-  if (action === "print-selected-projects") printProjects(selectedProjects());
-  if (action === "roadmap-selected-projects") exportRoadmap(selectedProjects());
-  if (action === "export-selected-md") exportProjectsMarkdown(selectedProjects());
+  if (action === "print-roadmap-selected-projects") printReport(selectedProjects(), "roadmap");
+  if (action === "print-gantt-selected-projects") printReport(selectedProjects(), "gantt");
   if (action === "project-from-template") {
     const template = state.templates.find((item) => item.id === target.dataset.id);
     openProjectEditor(null, template);
@@ -912,14 +922,6 @@ document.addEventListener("click", (event) => {
     render();
   }
   if (action === "edit-project") openProjectEditor(state.projects.find((item) => item.id === target.dataset.id));
-  if (action === "export-project-md") {
-    const project = state.projects.find((item) => item.id === target.dataset.id);
-    if (project) exportProjectMarkdown(project);
-  }
-  if (action === "print-project") {
-    const project = state.projects.find((item) => item.id === target.dataset.id);
-    if (project) printProject(project);
-  }
   if (action === "delete-project" && confirm("删除这个项目？")) {
     state.projects = state.projects.filter((item) => item.id !== target.dataset.id);
     selectedProjectIds.delete(target.dataset.id);

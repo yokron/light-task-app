@@ -796,4 +796,180 @@ input[type="date"]::-webkit-date-and-time-value {
     color: #666;
     font-size: 10px;
   }
+
+  .roadmap-report,
+  .gantt-report {
+    width: 100%;
+    color: #17231f;
+    font: 11px/1.35 "Microsoft YaHei", "Segoe UI", sans-serif;
+  }
+
+  .roadmap-report-head,
+  .gantt-report-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: end;
+    gap: 24px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #17231f;
+  }
+
+  .roadmap-report h1,
+  .gantt-report h1 {
+    margin: 0;
+    font-size: 25px;
+  }
+
+  .roadmap-report-head > p,
+  .gantt-report-head > p {
+    margin: 0;
+    color: #66736d;
+  }
+
+  .roadmap-scale,
+  .gantt-scale {
+    margin-left: 220px;
+    height: 34px;
+    border-bottom: 1px solid #c9d0c9;
+  }
+
+  .roadmap-scale-inner,
+  .gantt-scale-inner,
+  .roadmap-track,
+  .gantt-track {
+    position: relative;
+    height: 100%;
+  }
+
+  .roadmap-tick,
+  .gantt-tick {
+    position: absolute;
+    bottom: 0;
+    height: 100%;
+    border-left: 1px solid #d9ded8;
+    color: #66736d;
+  }
+
+  .roadmap-tick b,
+  .gantt-tick b {
+    position: absolute;
+    top: 5px;
+    left: 5px;
+    white-space: nowrap;
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  .roadmap-project {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    min-height: 56px;
+    border-bottom: 1px solid #e5e7e1;
+  }
+
+  .roadmap-project-label {
+    display: grid;
+    align-content: center;
+    gap: 3px;
+    padding: 7px 14px 7px 0;
+    overflow-wrap: anywhere;
+  }
+
+  .roadmap-project-label span,
+  .gantt-label small {
+    color: #66736d;
+    font-size: 10px;
+  }
+
+  .roadmap-track,
+  .gantt-track {
+    margin: 8px 0;
+    background: repeating-linear-gradient(90deg, transparent 0, transparent calc(14.285% - 1px), #eef0eb calc(14.285% - 1px), #eef0eb 14.285%);
+  }
+
+  .roadmap-bar,
+  .gantt-bar {
+    position: absolute;
+    z-index: 2;
+    min-width: 4px;
+    height: 18px;
+    margin-top: 8px;
+    overflow: hidden;
+    border-radius: 4px;
+    color: #fff;
+    font-size: 10px;
+    line-height: 18px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .roadmap-bar span,
+  .gantt-bar span {
+    padding: 0 7px;
+  }
+
+  .roadmap-bar.project-window,
+  .gantt-project-window {
+    z-index: 1;
+    height: 4px;
+    margin-top: 0;
+    border-radius: 0;
+    background: #bdc8c0;
+  }
+
+  .roadmap-bar.complete,
+  .gantt-bar.complete { background: #1b7f65; }
+  .roadmap-bar.active,
+  .gantt-bar.active { background: #2f67a8; }
+  .roadmap-bar.late,
+  .gantt-bar.late { background: #b54747; }
+
+  .roadmap-milestone {
+    position: absolute;
+    z-index: 3;
+    top: 5px;
+    width: 14px;
+    height: 14px;
+    margin-left: -7px;
+    transform: rotate(45deg);
+    border: 2px solid #17231f;
+    background: #fffdf7;
+  }
+
+  .gantt-project-row,
+  .gantt-task-row {
+    display: grid;
+    grid-template-columns: 220px minmax(0, 1fr);
+    min-height: 32px;
+    border-bottom: 1px solid #e5e7e1;
+  }
+
+  .gantt-project-row {
+    min-height: 44px;
+    background: #f1f5f1;
+    border-top: 1px solid #c9d0c9;
+  }
+
+  .gantt-label {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-width: 0;
+    padding: 5px 14px 5px 0;
+    overflow-wrap: anywhere;
+  }
+
+  .task-label { padding-left: 16px; color: #435149; }
+  .gantt-project-window { position: absolute; top: 50%; transform: translateY(-50%); border-radius: 4px; }
+  .gantt-bar { top: 50%; margin-top: 0; transform: translateY(-50%); }
+
+  .roadmap-legend,
+  .gantt-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 16px;
+    color: #66736d;
+    font-size: 10px;
+  }
 }
